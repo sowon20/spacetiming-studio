@@ -1,0 +1,13 @@
+# Python venv
+.venv/
+flow_automation/.venv/
+veo_agent/.venv/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Node / build
+node_modules/
+dist/
+build/

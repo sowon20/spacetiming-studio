@@ -1,0 +1,8 @@
+{
+  "python.defaultInterpreterPath": "flow_automation/.venv/bin/python",
+  "python.analysis.extraPaths": [
+    "flow_automation"
+],
+"python-envs.defaultEnvManager": "ms-python.python:venv",
+"python-envs.pythonProjects": []
+}

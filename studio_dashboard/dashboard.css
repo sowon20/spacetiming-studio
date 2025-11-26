@@ -1,0 +1,40 @@
+body {
+    background: #111;
+    color: #f8f8f8;
+    font-family: 'Montserrat', 'Pretendard', sans-serif;
+}
+
+.dashboard-container {
+    max-width: 800px;
+    margin: 40px auto;
+}
+
+.input-panel {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.input-panel input {
+    flex: 1;
+    padding: 10px;
+    border-radius: 8px;
+    border: none;
+}
+
+button {
+    background: #FCD571;
+    padding: 10px 16px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    color: #111;
+    font-weight: 600;
+}
+
+pre {
+    background: #1b1b1b;
+    padding: 16px;
+    border-radius: 8px;
+    white-space: pre-wrap;
+}

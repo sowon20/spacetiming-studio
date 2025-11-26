@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "Spacetime Studio Sidebar",
+  "version": "0.1.0",
+
+  "permissions": ["sidePanel"],
+
+  "host_permissions": [
+    "http://127.0.0.1:8899/*",
+    "http://127.0.0.1:8898/*"
+  ],
+
+  "side_panel": {
+    "default_path": "sidebar.html"
+  },
+
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+
+  "action": {
+    "default_title": "Spacetime Studio"
+  }
+}

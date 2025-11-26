@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>Spacetime Studio</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- 폰트 & 아이콘 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+    rel="stylesheet"
+  />
+  <link
+    rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0"
+  />
+
+  <link rel="stylesheet" href="sidebar.css" />
+</head>
+<body>
+  <div class="app">
+    <!-- 헤더 -->
+    <header class="app-header">
+      <div class="app-title">
+        <span class="dot"></span>
+        <div class="title-text">
+          <div class="label">Spacetime Studio</div>
+          <div class="subtitle">시공간 스튜디오 부감독</div>
+        </div>
+      </div>
+      <div class="status-pill status-ok" id="studioStatusPill">
+        <span class="status-led"></span>
+        <span id="studioStatusText">ONLINE</span>
+      </div>
+    </header>
+
+    <!-- 탭 -->
+    <nav class="tab-bar">
+      <button class="tab-button active" data-view="dashboard">
+        <span class="material-symbols-rounded">dashboard</span>
+        <span>Dashboard</span>
+      </button>
+      <button class="tab-button" data-view="prompt">
+        <span class="material-symbols-rounded">auto_fix_high</span>
+        <span>Prompt Lab</span>
+      </button>
+    </nav>
+
+    <!-- 메인 영역 -->
+    <main class="app-main">
+      <!-- VIEW 1: DASHBOARD -->
+      <div id="view-dashboard" class="view active">
+        <!-- 현재 프로젝트 진행 카드 -->
+        <section class="section">
+          <div class="section-header">
+            <h2>Current Project</h2>
+            <span class="section-caption">
+              가장 가까운 업로드 일정의 메인 영상 작업 상태.
+            </span>
+          </div>
+
+          <div class="card card-current" id="currentProjectCard">
+            <div class="current-top">
+              <div>
+                <div class="current-label">다음 업로드</div>
+                <div class="current-title" id="currentTitle">-</div>
+              </div>
+              <div class="current-meta">
+                <div id="currentDate">-</div>
+                <div id="currentStage" class="badge-soft">-</div>
+              </div>
+            </div>
+
+            <div class="current-body">
+              <div class="progress-row">
+                <span class="progress-label">진행률</span>
+                <span class="progress-value" id="currentProgressText">0%</span>
+              </div>
+              <div class="progress-bar">
+                <div class="progress-fill" id="currentProgressFill"></div>
+              </div>
+              <p class="current-logline" id="currentLogline">
+                아직 연결된 작업이 없어요. 아이디어를 하나 던져주면, 여기서부터 타임라인을 채워볼게.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <!-- 앞으로 3주 영상 계획 -->
+        <section class="section">
+          <div class="section-header">
+            <h2>Next 3 Weeks</h2>
+            <span class="section-caption">
+              매주 1편, 앞으로 3주 간의 메인 영상 계획.
+            </span>
+          </div>
+
+          <div class="card card-list" id="upcomingList">
+            <!-- JS에서 항목 채울 거라서 기본 상태 메시지만 -->
+            <div class="empty-state">
+              <span class="material-symbols-rounded">calendar_today</span>
+              <div>아직 등록된 일정이 없어.</div>
+              <div class="empty-sub">아이디어가 쌓이면 여기서 3주 간 스케줄을 정리해줄게.</div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- VIEW 2: PROMPT LAB (기존 기능) -->
+      <div id="view-prompt" class="view">
+        <!-- 섹션 1: 오늘 아이디어 -->
+        <section class="section">
+          <div class="section-header">
+            <h2>Today’s Idea</h2>
+            <span class="section-caption">영상 느낌, 장면, 단어… 아무거나 편하게 적어줘.</span>
+          </div>
+          <div class="card card-input">
+            <textarea
+              id="ideaInput"
+              class="idea-textarea"
+              placeholder="예) 지구가 만들어지는 과정을 소리 위주로 보여주는 몽환적인 영상. 너무 다큐같진 않았으면 좋겠고, 마지막엔 지금의 일상을 살짝 비춰줬으면 좋겠어."
+            ></textarea>
+            <div class="input-footer">
+              <button id="btnGeneratePrompt" class="btn primary">
+                <span class="material-symbols-rounded">auto_fix_high</span>
+                <span>부감독에게 맡기기</span>
+              </button>
+              <span id="ideaHint" class="hint-text">
+                한 줄이어도, 긴 독백이어도 괜찮아. 부감독이 알아서 제목/프롬프트로 정리할게.
+              </span>
+            </div>
+          </div>
+        </section>
+
+        <!-- 섹션 2: 자동 기획 & 프롬프트 -->
+        <section class="section">
+          <div class="section-header">
+            <h2>Prompt Result</h2>
+            <span class="section-caption">지금 영상의 제목과 프롬프트를 요약해놓은 공간.</span>
+          </div>
+
+          <div class="card card-output">
+            <div class="output-row">
+              <div class="output-label">
+                <span class="material-symbols-rounded">movie</span>
+                <span>자동 제목</span>
+              </div>
+              <div id="titleOutput" class="output-value muted">
+                아직 아이디어를 안 넘겨줬어.
+              </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="output-row column">
+              <div class="output-label">
+                <span class="material-symbols-rounded">description</span>
+                <span>메인 프롬프트</span>
+              </div>
+              <pre id="mainPromptOutput" class="output-multiline muted">
+여기에 Veo 메인 프롬프트가 정리돼서 들어올 거야.</pre>
+            </div>
+
+            <div class="output-row column">
+              <div class="output-label">
+                <span class="material-symbols-rounded">bolt</span>
+                <span>티저 프롬프트</span>
+              </div>
+              <pre id="teaserPromptOutput" class="output-multiline muted">
+짧은 8초 분량의 티저 프롬프트가 여기에.</pre>
+            </div>
+          </div>
+        </section>
+
+        <!-- 섹션 3: Flow 자동화 -->
+        <section class="section">
+          <div class="section-header">
+            <h2>Flow Control</h2>
+            <span class="section-caption">이 프롬프트로 Flow에서 바로 영상 생성 시작.</span>
+          </div>
+
+          <div class="card card-actions">
+            <div class="actions-row">
+              <button id="btnRunFlow" class="btn secondary">
+                <span class="material-symbols-rounded">play_circle</span>
+                <span>Flow로 보내기</span>
+              </button>
+              <button id="btnCopyMain" class="btn ghost">
+                <span class="material-symbols-rounded">content_copy</span>
+                <span>프롬프트 복사</span>
+              </button>
+            </div>
+            <div id="statusBar" class="status-bar">
+              <span class="status-dot idle"></span>
+              <span id="statusText">대기 중…</span>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <script src="sidebar.js"></script>
+</body>
+</html>

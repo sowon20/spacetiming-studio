@@ -1,0 +1,571 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+:root {
+  --bg: #050712;
+  --bg-elevated: #0c0f1c;
+  --accent: #fcd571;
+  --accent-soft: rgba(252, 213, 113, 0.16);
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --text-main: #f8f8f8;
+  --text-sub: #a0a0a8;
+  --text-muted: #666a78;
+  --danger: #ff6b81;
+  --radius-lg: 18px;
+  --radius-md: 12px;
+  --radius-pill: 999px;
+  --shadow-soft: 0 18px 40px rgba(0, 0, 0, 0.7);
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 13px;
+  background: radial-gradient(circle at top, #161a35 0, #050712 50%, #020308 100%);
+  color: var(--text-main);
+}
+
+/* 메인 앱 컨테이너 */
+
+.app {
+  width: 100%;
+  height: 100vh;
+  padding: 10px 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* 헤더 */
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 11px;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, rgba(10, 12, 25, 0.96), rgba(6, 8, 18, 0.98));
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-soft);
+}
+
+.app-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dot {
+  width: 9px;
+  height: 9px;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  box-shadow: 0 0 14px rgba(252, 213, 113, 0.9);
+}
+
+.title-text .label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--text-sub);
+}
+
+.subtitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+/* 상태 표시 */
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: radial-gradient(circle at top, rgba(255, 255, 255, 0.08), rgba(3, 4, 10, 0.9));
+  color: var(--text-sub);
+}
+
+.status-pill .status-led {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+}
+
+.status-pill.status-ok .status-led {
+  background: #4caf50;
+  box-shadow: 0 0 10px rgba(76, 175, 80, 0.9);
+}
+
+.status-pill.status-error .status-led {
+  background: var(--danger);
+  box-shadow: 0 0 10px rgba(255, 107, 129, 0.9);
+}
+
+.status-pill.status-idle .status-led {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* 탭 */
+
+.tab-bar {
+  display: flex;
+  gap: 6px;
+  padding: 2px 2px 0;
+}
+
+.tab-button {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border-radius: var(--radius-pill);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 11px;
+  padding: 5px 8px;
+  cursor: pointer;
+}
+
+.tab-button .material-symbols-rounded {
+  font-size: 16px;
+}
+
+.tab-button.active {
+  background: rgba(252, 213, 113, 0.12);
+  border-color: rgba(252, 213, 113, 0.5);
+  color: var(--accent);
+}
+
+/* 메인 스크롤 */
+
+.app-main {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 2px;
+  display: flex;
+  flex-direction: column;
+}
+
+.view {
+  display: none;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.view.active {
+  display: flex;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.section-header h2 {
+  margin: 0;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-sub);
+}
+
+.section-caption {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* 카드 공통 */
+
+.card {
+  background: radial-gradient(circle at top left, rgba(252, 213, 113, 0.03), rgba(3, 4, 10, 0.96));
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-subtle);
+  padding: 10px;
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.7);
+}
+
+/* 현재 프로젝트 카드 */
+
+.card-current {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.current-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.current-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.current-title {
+  margin-top: 2px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.current-meta {
+  text-align: right;
+  font-size: 11px;
+  color: var(--text-sub);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.badge-soft {
+  align-self: flex-end;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 10px;
+  color: var(--text-sub);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.current-body {
+  margin-top: 6px;
+}
+
+.progress-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--text-sub);
+  margin-bottom: 4px;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+
+.progress-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #fcd571, #f5b84d);
+  box-shadow: 0 0 12px rgba(252, 213, 113, 0.9);
+  transition: width 0.4s ease;
+}
+
+.current-logline {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-sub);
+}
+
+/* 3주 리스트 카드 */
+
+.card-list {
+  padding: 8px 8px 6px;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px;
+  font-size: 12px;
+  color: var(--text-sub);
+}
+
+.empty-state .material-symbols-rounded {
+  font-size: 20px;
+  color: var(--accent);
+}
+
+.empty-sub {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* 일정 아이템 */
+
+.upcoming-item {
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  gap: 8px;
+  padding: 7px 6px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  background: rgba(4, 6, 14, 0.9);
+  margin-bottom: 5px;
+}
+
+.thumb {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: radial-gradient(circle at top, rgba(252, 213, 113, 0.2), rgba(4, 6, 14, 0.95));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  color: rgba(0, 0, 0, 0.7);
+}
+
+.upcoming-main {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.upcoming-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-main);
+}
+
+.upcoming-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--text-sub);
+}
+
+.upcoming-logline {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* Prompt Lab 쪽 스타일 (기존) */
+
+.idea-textarea {
+  width: 100%;
+  min-height: 90px;
+  max-height: 160px;
+  resize: vertical;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(5, 7, 20, 0.96);
+  padding: 8px 9px;
+  font-size: 12px;
+  color: var(--text-main);
+  outline: none;
+}
+
+.idea-textarea::placeholder {
+  color: var(--text-muted);
+}
+
+.idea-textarea:focus {
+  border-color: rgba(252, 213, 113, 0.6);
+  box-shadow: 0 0 0 1px rgba(252, 213, 113, 0.3);
+}
+
+.input-footer {
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.hint-text {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+/* 버튼 */
+
+.btn {
+  border-radius: var(--radius-pill);
+  border: 1px solid transparent;
+  padding: 5px 10px;
+  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btn span.material-symbols-rounded {
+  font-size: 15px;
+}
+
+.btn.primary {
+  background: linear-gradient(135deg, #fcd571, #f5b84d);
+  color: #201500;
+  font-weight: 600;
+  box-shadow: 0 0 0 1px rgba(255, 213, 113, 0.6), 0 8px 20px rgba(0, 0, 0, 0.85);
+}
+
+.btn.primary:hover {
+  filter: brightness(1.03);
+}
+
+.btn.secondary {
+  background: rgba(252, 213, 113, 0.1);
+  color: var(--accent);
+  border-color: rgba(252, 213, 113, 0.4);
+}
+
+.btn.secondary:hover {
+  background: rgba(252, 213, 113, 0.16);
+}
+
+.btn.ghost {
+  background: transparent;
+  color: var(--text-sub);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.btn.ghost:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Prompt 출력 */
+
+.card-output {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.output-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.output-row.column {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.output-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--text-sub);
+}
+
+.output-label .material-symbols-rounded {
+  font-size: 16px;
+}
+
+.output-value {
+  font-size: 12px;
+  text-align: right;
+}
+
+.output-multiline {
+  width: 100%;
+  margin: 3px 0 0;
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: keep-all;
+  background: rgba(3, 4, 10, 0.85);
+  border-radius: var(--radius-md);
+  padding: 7px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.muted {
+  color: var(--text-muted);
+}
+
+.divider {
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.14), transparent);
+  margin: 2px 0 4px;
+}
+
+/* 액션 카드 / 상태바 */
+
+.card-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.actions-row {
+  display: flex;
+  gap: 6px;
+}
+
+.actions-row .btn {
+  flex: 1;
+}
+
+.status-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+}
+
+.status-dot.idle {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.status-dot.ok {
+  background: #4caf50;
+  box-shadow: 0 0 10px rgba(76, 175, 80, 0.7);
+}
+
+.status-dot.error {
+  background: var(--danger);
+  box-shadow: 0 0 10px rgba(255, 107, 129, 0.8);
+}
+
+/* 스크롤 */
+
+.app-main::-webkit-scrollbar {
+  width: 4px;
+}
+
+.app-main::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.app-main::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+}
