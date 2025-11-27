@@ -3,8 +3,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // 탭 전환
   // ==========================
   const tabButtons = document.querySelectorAll(".tab-button");
-  const dashboardView = document.getElementById("view-dashboard");
-  const promptView = document.getElementById("view-prompt");
+  const views = document.querySelectorAll(".view");
 
   tabButtons.forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -13,15 +12,16 @@ document.addEventListener("DOMContentLoaded", () => {
       tabButtons.forEach((b) => b.classList.remove("active"));
       btn.classList.add("active");
 
-      if (dashboardView && promptView) {
-        if (viewName === "dashboard") {
-          dashboardView.classList.add("active");
-          promptView.classList.remove("active");
-        } else if (viewName === "prompt") {
-          promptView.classList.add("active");
-          dashboardView.classList.remove("active");
+      if (!views || views.length === 0) return;
+
+      views.forEach((v) => {
+        const expectedId = viewName ? `view-${viewName}` : null;
+        if (expectedId && v.id === expectedId) {
+          v.classList.add("active");
+        } else {
+          v.classList.remove("active");
         }
-      }
+      });
     });
   });
 
@@ -144,6 +144,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const statusDot = statusBar ? statusBar.querySelector(".status-dot") : null;
 
   let lastPayload = null; // Flow로 넘길 최신 프롬프트 세트
+  let lastEpisodeId = null; // 최근 생성된 에피소드 ID (피드백용)
 
   function setStatus(mode, text) {
     if (statusText) {
@@ -167,6 +168,13 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
+    if (btnGeneratePrompt) {
+      btnGeneratePrompt.disabled = true;
+    }
+    if (btnRunFlow) {
+      btnRunFlow.disabled = true;
+    }
+
     setStatus("idle", "부감독이 기획 정리 중…");
 
     const roughTitle = idea.split("\n")[0].slice(0, 40) || "Untitled";
@@ -185,6 +193,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (!data.ok) {
         setStatus("error", data.error || "프롬프트 생성 중 오류가 났어.");
+        if (btnGeneratePrompt) btnGeneratePrompt.disabled = false;
+        if (btnRunFlow) btnRunFlow.disabled = false;
         return;
       }
 
@@ -205,7 +215,10 @@ document.addEventListener("DOMContentLoaded", () => {
         teaserPromptOutput.classList.remove("muted");
       }
 
+      lastEpisodeId = data.episode_id || null;
+
       lastPayload = {
+        episode_id: lastEpisodeId,
         title: finalTitle,
         main_prompt: main,
         teaser_prompt: teaser,
@@ -213,9 +226,14 @@ document.addEventListener("DOMContentLoaded", () => {
       };
 
       setStatus("ok", "프롬프트 준비 완료. Flow로 보낼 수 있어.");
+
+      if (btnGeneratePrompt) btnGeneratePrompt.disabled = false;
+      if (btnRunFlow) btnRunFlow.disabled = false;
     } catch (err) {
       console.error(err);
       setStatus("error", "부감독 서버(8899)에 연결하지 못했어.");
+      if (btnGeneratePrompt) btnGeneratePrompt.disabled = false;
+      if (btnRunFlow) btnRunFlow.disabled = false;
     }
   }
 
@@ -224,6 +242,8 @@ document.addEventListener("DOMContentLoaded", () => {
       setStatus("error", "먼저 프롬프트를 한 번 생성해줘.");
       return;
     }
+
+    if (btnRunFlow) btnRunFlow.disabled = true;
 
     setStatus("idle", "Flow에 프롬프트 전달 중…");
 
@@ -238,13 +258,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (!data.ok) {
         setStatus("error", data.error || "Flow 자동 실행 중 오류가 났어.");
+        if (btnRunFlow) btnRunFlow.disabled = false;
         return;
       }
 
       setStatus("ok", "Flow 브라우저 탭에 프롬프트 전달 완료!");
+      if (btnRunFlow) btnRunFlow.disabled = false;
     } catch (err) {
       console.error(err);
       setStatus("error", "Flow 서버(8898)에 연결하지 못했어.");
+      if (btnRunFlow) btnRunFlow.disabled = false;
     }
   }
 
@@ -266,6 +289,61 @@ document.addEventListener("DOMContentLoaded", () => {
         console.error(err);
         setStatus("error", "클립보드 복사에 실패했어.");
       });
+  }
+
+  async function sendFeedback(verdict) {
+    if (!lastEpisodeId) {
+      setStatus("error", "먼저 프롬프트를 생성해서 에피소드를 만들어야 해.");
+      return;
+    }
+  
+    const labels = {
+      approved: "합격",
+      revise: "수정",
+      discard: "폐기",
+    };
+  
+    const note = window.prompt("감독 메모 (선택 입력 가능):") || "";
+  
+    setStatus("idle", `${labels[verdict] || "피드백"} 저장 중…`);
+  
+    try {
+      const res = await fetch("http://127.0.0.1:8899/veo/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          episode_id: lastEpisodeId,
+          verdict,
+          note: note || undefined,
+        }),
+      });
+  
+      const data = await res.json();
+  
+      if (!data.ok) {
+        setStatus("error", data.error || "피드백 저장 중 오류가 났어.");
+        return;
+      }
+  
+      setStatus("ok", `피드백이 저장됐어. (${labels[verdict] || verdict})`);
+    } catch (err) {
+      console.error(err);
+      setStatus("error", "피드백 API 서버(8899)에 연결하지 못했어.");
+    }
+  }
+  
+  const btnApprove = document.querySelector(".fb-approve");
+  const btnRevise = document.querySelector(".fb-revise");
+  const btnDiscard = document.querySelector(".fb-discard");
+  
+  if (btnApprove) {
+    btnApprove.addEventListener("click", () => sendFeedback("approved"));
+  }
+  if (btnRevise) {
+    btnRevise.addEventListener("click", () => sendFeedback("revise"));
+  }
+  if (btnDiscard) {
+    btnDiscard.addEventListener("click", () => sendFeedback("discard"));
   }
 
   if (btnGeneratePrompt) {

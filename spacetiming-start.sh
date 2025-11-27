@@ -1,4 +1,4 @@
-#!/bin/zsh
+#!/bin/zsh -l
 
 # 🔭 Spacetime Studio 일괄 실행 스크립트
 

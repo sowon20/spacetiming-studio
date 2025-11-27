@@ -510,6 +510,48 @@ body {
   margin: 2px 0 4px;
 }
 
+/* 피드백 버튼 (합격 / 수정 / 폐기) */
+.feedback-buttons {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.feedback-buttons button {
+  flex: 1;
+  padding: 5px 8px;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(5, 7, 20, 0.96);
+  font-size: 11px;
+  cursor: pointer;
+  color: var(--text-main);
+  transition: background 0.15s ease, transform 0.08s ease, box-shadow 0.15s ease;
+}
+
+.feedback-buttons button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.7);
+}
+
+.feedback-buttons .fb-approve {
+  border-color: rgba(60, 180, 110, 0.7);
+  background: linear-gradient(135deg, rgba(60, 180, 110, 0.2), rgba(5, 7, 20, 0.96));
+  color: #c9f7dd;
+}
+
+.feedback-buttons .fb-revise {
+  border-color: rgba(230, 163, 60, 0.7);
+  background: linear-gradient(135deg, rgba(230, 163, 60, 0.18), rgba(5, 7, 20, 0.96));
+  color: #ffe4b8;
+}
+
+.feedback-buttons .fb-discard {
+  border-color: rgba(217, 65, 65, 0.7);
+  background: linear-gradient(135deg, rgba(217, 65, 65, 0.18), rgba(5, 7, 20, 0.96));
+  color: #ffd1d6;
+}
+
 /* 액션 카드 / 상태바 */
 
 .card-actions {

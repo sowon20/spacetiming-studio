@@ -11,3 +11,8 @@ __pycache__/
 node_modules/
 dist/
 build/
+
+# API keys / secrets
+veo_agent/keys/
+*.key
+.env

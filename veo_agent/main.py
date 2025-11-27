@@ -14,29 +14,21 @@ from pydantic import BaseModel
 # -----------------------------
 BASE_DIR = Path(__file__).resolve().parent
 EPISODES_DIR = BASE_DIR / "episodes"
-KEYS_DIR = BASE_DIR / "keys"
-GEMINI_KEY_FILE = KEYS_DIR / "gemini_api.key"
 
 EPISODES_DIR.mkdir(exist_ok=True, parents=True)
 
 # -----------------------------
 # Gemini 세팅 (google-generativeai)
 # -----------------------------
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-
-if not GEMINI_API_KEY and GEMINI_KEY_FILE.exists():
-    GEMINI_API_KEY = GEMINI_KEY_FILE.read_text(encoding="utf-8").strip()
-    os.environ["GEMINI_API_KEY"] = GEMINI_API_KEY
-
 try:
     import google.generativeai as genai
-
-    if GEMINI_API_KEY:
-        genai.configure(api_key=GEMINI_API_KEY)
-    GEMINI_AVAILABLE = bool(GEMINI_API_KEY)
 except Exception:
     genai = None
-    GEMINI_AVAILABLE = False
+
+
+def is_gemini_available() -> bool:
+    api_key = os.getenv("GEMINI_API_KEY")
+    return bool(api_key and genai is not None)
 
 GEMINI_MODEL_NAME = "gemini-2.5-flash"  # 필요시 변경
 
@@ -130,8 +122,10 @@ def call_gemini_for_prompts(title: str, plan: Optional[str]) -> dict:
     - 기본적으로 JSON 응답을 기대
     - 실패 시 전체 텍스트를 main_prompt로 사용
     """
-    if not GEMINI_AVAILABLE:
-        raise RuntimeError("GEMINI_API_KEY not configured or Gemini client unavailable")
+    if not is_gemini_available():
+        raise RuntimeError(
+            "부감독에게 맡기기를 눌렀을 때 GEMINI_API_KEY 환경변수가 설정되어 있지 않아. 로컬 환경변수 설정을 확인해줘."
+        )
 
     system_prompt = """
 You are the Veo prompt-writing assistant for Space-Timing Studio.
@@ -190,18 +184,12 @@ def health_check():
     return {
         "status": "ok",
         "episodes_dir": str(EPISODES_DIR),
-        "gemini_available": GEMINI_AVAILABLE,
+        "gemini_available": is_gemini_available(),
     }
 
 
 @app.post("/veo/prompt")
 def create_prompt(req: PromptRequest):
-    if not GEMINI_AVAILABLE:
-        return {
-            "ok": False,
-            "error": "GEMINI_API_KEY가 설정되어 있지 않아. keys/gemini_api.key 또는 환경변수를 확인해줘.",
-        }
-
     try:
         prompts = call_gemini_for_prompts(req.title, req.plan)
     except Exception as e:

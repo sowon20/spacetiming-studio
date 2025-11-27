@@ -46,6 +46,10 @@
         <span class="material-symbols-rounded">auto_fix_high</span>
         <span>Prompt Lab</span>
       </button>
+      <button class="tab-button" data-view="flow">
+        <span class="material-symbols-rounded">movie_edit</span>
+        <span>Flow</span>
+      </button>
     </nav>
 
     <!-- 메인 영역 -->
@@ -85,6 +89,12 @@
                 아직 연결된 작업이 없어요. 아이디어를 하나 던져주면, 여기서부터 타임라인을 채워볼게.
               </p>
             </div>
+          </div>
+          <!-- 피드백 버튼: 에피소드 평가 (합격 / 수정 / 폐기) -->
+          <div class="feedback-buttons">
+            <button class="fb-approve">합격</button>
+            <button class="fb-revise">수정</button>
+            <button class="fb-discard">폐기</button>
           </div>
         </section>
 
@@ -173,8 +183,10 @@
             </div>
           </div>
         </section>
+      </div>
 
-        <!-- 섹션 3: Flow 자동화 -->
+      <!-- VIEW 3: FLOW CONTROL -->
+      <div id="view-flow" class="view">
         <section class="section">
           <div class="section-header">
             <h2>Flow Control</h2>
