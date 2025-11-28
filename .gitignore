@@ -15,4 +15,6 @@ build/
 # API keys / secrets
 veo_agent/keys/
 *.key
-.env
+.env*
+*.env
+소원메모

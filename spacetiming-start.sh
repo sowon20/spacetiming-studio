@@ -6,6 +6,11 @@ source ~/.zshrc
 # 0) 프로젝트 루트 경로
 ROOT="$HOME/시공간 스튜디오/spacetiming-studio"
 
+# Python 3.10 가상환경 활성화
+if [ -f "$ROOT/.venv310/bin/activate" ]; then
+  source "$ROOT/.venv310/bin/activate"
+fi
+
 # 1) VEO 프롬프트 에이전트 서버 (8899)
 cd "$ROOT/veo_agent"
 /bin/zsh ./run.sh &

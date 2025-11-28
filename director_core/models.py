@@ -4,7 +4,7 @@ from typing import Literal, Optional, List, Dict, Any
 from pydantic import BaseModel, Field
 
 
-ModeLiteral = Literal["chat"]  # 나중에 "image", "audio" 등 확장 예정
+ModeLiteral = Literal["chat", "vision"]  # vision 모드 추가
 IntentLiteral = Literal[
     "veo_prompt",
     "casual_chat",
@@ -42,6 +42,7 @@ class AnalyzeRequest(BaseModel):
         default=None,
         description="이미지/음성/영상 파일 URL (image/audio/video 모드에서 사용)",
     )
+    media: Optional[List[Dict[str, Any]]] = None  # telegram image/video list
     context: Optional[AnalyzeContext] = None
 
 

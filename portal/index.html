@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>Soown Portal</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="app">
+    <aside class="sidebar">
+      <h2>🌀 Soown Portal</h2>
+      <ul>
+        <li>대화</li>
+        <li>업무</li>
+        <li>기억</li>
+        <li>스마트홈</li>
+      </ul>
+    </aside>
+
+    <main class="chat">
+      <div id="chat-log"></div>
+      <div class="chat-input">
+        <input id="msg" placeholder="메시지를 입력하세요..." />
+        <button id="send">보내기</button>
+      </div>
+    </main>
+
+    <aside class="tools">
+      <button id="mic">🎤 음성 대화</button>
+      <button id="upload">📸 이미지</button>
+    </aside>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

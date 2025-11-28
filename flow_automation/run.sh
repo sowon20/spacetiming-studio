@@ -5,12 +5,10 @@ echo "🛰  Flow Automation Agent starting..."
 # 0) 루트 env 불러오기
 source ../spacetiming-env.sh
 
-# 1) venv 체크
-if [ ! -d ".venv" ]; then
-  python3 -m venv .venv
-fi
-
-source .venv/bin/activate
+# 1) venv310 활성화
+cd ..
+source .venv310/bin/activate
+cd flow_automation
 
 # 2) 패키지
 pip install --upgrade pip

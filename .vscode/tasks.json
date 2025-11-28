@@ -1,0 +1,46 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "① director_core 서버",
+      "type": "shell",
+      "command": "cd \"$HOME/시공간 스튜디오/spacetiming-studio\" && source .venv310/bin/activate && python -m uvicorn director_core.main:app --port 8897",
+      "problemMatcher": []
+    },
+    {
+      "label": "② VEO 서버",
+      "type": "shell",
+      "command": "cd \"$HOME/시공간 스튜디오/spacetiming-studio/veo_agent\" && source ../.venv310/bin/activate && python -m uvicorn main:app --port 8899",
+      "problemMatcher": []
+    },
+    {
+      "label": "③ Telegram 봇",
+      "type": "shell",
+      "command": "cd \"$HOME/시공간 스튜디오/spacetiming-studio/telegram_bot\" && source ../.venv310/bin/activate && python bot.py",
+      "problemMatcher": []
+    },
+    {
+      "label": "🔥 한방에 모두 실행",
+      "dependsOn": [
+        "① director_core 서버",
+        "② VEO 서버",
+        "③ Telegram 봇"
+      ],
+      "dependsOrder": "parallel",
+      "problemMatcher": []
+    },
+    {
+      "label": "④ Gemini 모델 목록",
+      "type": "shell",
+      "command": "cd \"$HOME/시공간 스튜디오/spacetiming-studio\" && source .venv310/bin/activate && python scripts/list_gemini_models.py",
+      "problemMatcher": []
+    },
+    {
+      "label": "⑤ Gemini Live 테스트",
+      "type": "shell",
+      "command": "cd \"$HOME/시공간 스튜디오/spacetiming-studio\" && source .venv310/bin/activate && python scripts/list_live_models.py",
+      "problemMatcher": []
+    }
+    
+  ]
+}
