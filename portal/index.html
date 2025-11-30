@@ -1,36 +1,901 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-  <title>Soown Portal</title>
-  <link rel="stylesheet" href="style.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Sowon's Workspace</title>
+
+  <!-- 폰트 CDN -->
+  <link rel="stylesheet" as="style" crossorigin
+    href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" />
+
+  <!-- 우리가 쓰는 메인 스타일 -->
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div id="app">
-    <aside class="sidebar">
-      <h2>🌀 Soown Portal</h2>
-      <ul>
-        <li>대화</li>
-        <li>업무</li>
-        <li>기억</li>
-        <li>스마트홈</li>
-      </ul>
-    </aside>
 
-    <main class="chat">
-      <div id="chat-log"></div>
-      <div class="chat-input">
-        <input id="msg" placeholder="메시지를 입력하세요..." />
-        <button id="send">보내기</button>
+  <div class="container">
+    <!-- Left Column: Work & AI -->
+    <div class="main-column">
+
+      <!-- Hero: Current Work -->
+      <div class="card hero-section">
+        <div class="section-header">
+          <span class="section-title">Current Project</span>
+          <div class="status-pill">
+            <div class="pulsing-dot"></div>
+            <span>작업 중 (Rendering)</span>
+          </div>
+        </div>
+
+        <div class="work-content">
+          <div class="video-preview">
+            <img src="https://img.youtube.com/vi/1S7__LzfOUw/hqdefault.jpg" alt="Thumbnail">
+            <div class="play-overlay">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="#F9F8F6">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            </div>
+          </div>
+
+          <div class="work-details">
+            <h1 class="work-title">우주의 끝: 심연의 시간 (Part 4)</h1>
+            <p class="work-desc">블랙홀 내부 시뮬레이션 시퀀스 렌더링 및 사운드 싱크 작업 중.</p>
+
+            <div class="ai-task-box">
+              <div class="ai-task-header">
+                <span>AI Agent Status</span>
+                <span>72%</span>
+              </div>
+              <div class="progress-bar">
+                <div class="progress-fill"></div>
+              </div>
+              <div style="margin-top: 8px; font-size: 12px; color: var(--text-secondary);">
+                Scene 4 텍스처 생성 및 노이즈 제거 중... (예상: 12분)
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
-    </main>
 
-    <aside class="tools">
-      <button id="mic">🎤 음성 대화</button>
-      <button id="upload">📸 이미지</button>
-    </aside>
+      <!-- AI Communication -->
+      <div class="card ai-comm-section">
+        <div class="section-header">
+          <span class="section-title">AI Assistant</span>
+          <div style="display: flex; gap: 8px;">
+            <button class="action-btn" title="Call">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2">
+                <path
+                  d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z">
+                </path>
+              </svg>
+            </button>
+            <button class="action-btn" title="Video Call">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2">
+                <polygon points="23 7 16 12 23 17 23 7"></polygon>
+                <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="live-call-panel" id="live-call-panel">
+          <div class="live-call-header">
+            <span class="live-call-title">Director Live</span>
+            <span class="live-call-status-dot"></span>
+            <span class="live-call-status-text" id="live-call-status-text">대기 중</span>
+          </div>
+          <div class="live-call-body">
+            <div class="live-call-wave">● ● ●</div>
+            <div class="live-call-hint">통화 시작하면 부감독이 실시간으로 대답해.</div>
+          </div>
+          <div class="live-call-footer">
+            <button class="live-call-btn" id="live-call-end-btn">종료</button>
+          </div>
+        </div>
+
+        <div class="chat-container" id="chat-container"></div>
+
+      <div class="input-area">
+        <button class="action-btn" id="chat-image-btn" style="width: 32px; height: 32px; border: none;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2">
+            <path
+              d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48">
+            </path>
+          </svg>
+        </button>
+        <!-- Hidden file input for image upload -->
+        <input type="file" id="chat-image-input" accept="image/*" style="display: none;">
+        <textarea class="input-field" id="chat-input" rows="1" placeholder="AI에게 메시지 보내기..."></textarea>
+        <button class="action-btn primary" id="chat-send">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2">
+            <line x1="22" y1="2" x2="11" y2="13"></line>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+          </svg>
+        </button>
+      </div>
+      </div>
+    </div>
+
+    <!-- Right Column: Schedule & Home -->
+    <div class="side-column">
+      <!-- Highlighted Studio Status Box -->
+      <div class="card highlighted-box">
+        <div style="margin-bottom: 4px;">
+          <div style="font-size: 13px; font-weight: 700;">Studio Status</div>
+          <div class="status-header-small">All systems operational · Studio Mode</div>
+        </div>
+        <div class="status-grid">
+          <div class="status-item">
+            <span class="status-dot"></span>
+            <span class="status-label">Director AI</span>
+          </div>
+          <div class="status-item">
+            <span class="status-dot"></span>
+            <span class="status-label">Flow Agent</span>
+          </div>
+          <div class="status-item">
+            <span class="status-dot"></span>
+            <span class="status-label">API Server</span>
+          </div>
+          <div class="status-item">
+            <span class="status-dot"></span>
+            <span class="status-label">Memory Sync</span>
+          </div>
+          <div class="status-item">
+            <span class="status-dot"></span>
+            <span class="status-label">Drive Backup</span>
+          </div>
+          <div class="status-item">
+            <span class="status-dot"></span>
+            <span class="status-label">Automation</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Schedule -->
+      <div class="card schedule-card">
+        <div class="section-header">
+          <span class="section-title">Upload Schedule</span>
+          <span style="font-size: 12px; color: var(--text-tertiary);">Next 3 Weeks</span>
+        </div>
+
+        <div class="schedule-weeks">
+          <!-- WEEK 1 -->
+          <div class="week-block">
+            <div class="week-header">
+              <span class="week-label-main">WEEK 1</span>
+              <span class="week-date">2024.11.30 · 토 · 22:00</span>
+            </div>
+            <div class="week-main">
+              <div class="week-thumb">
+                <img src="https://img.youtube.com/vi/1S7__LzfOUw/hqdefault.jpg" alt="우주의 끝 Part 4 썸네일">
+              </div>
+              <div class="week-main-info">
+                <div class="week-main-title">우주의 끝: 심연의 시간 (Part 4)</div>
+                <div class="week-main-desc">블랙홀 내부 시뮬레이션 본편 업로드 · 프리미어 방송</div>
+                <div class="week-meta-row">
+                  <span class="tag main">Main</span>
+                  <span>이번 주 메인 에피소드</span>
+                </div>
+                <div class="week-status-row">
+                  <span class="status-pill-small">예약 완료</span>
+                  <div class="week-progress">
+                    <div class="week-progress-bar">
+                      <div class="week-progress-fill" style="width: 72%;"></div>
+                    </div>
+                    <span class="week-progress-label">작업 진행률 72%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="week-shorts">
+              <span class="shorts-label">Shorts</span>
+              <div class="shorts-dots">
+                <div class="short-dot done"></div>
+                <div class="short-dot in-progress"></div>
+                <div class="short-dot"></div>
+              </div>
+              <span class="shorts-caption">인트로 / 블랙홀 줌인 / 사운드 싱크 티저</span>
+            </div>
+          </div>
+
+          <!-- WEEK 2 -->
+          <div class="week-block">
+            <div class="week-header">
+              <span class="week-label-main">WEEK 2</span>
+              <span class="week-date">2024.12.07 · 토 · 22:00</span>
+            </div>
+            <div class="week-main">
+              <div class="week-thumb">
+                <img src="sample.jpg" alt="다음 에피소드 썸네일">
+              </div>
+              <div class="week-main-info">
+                <div class="week-main-title">우주의 끝: 새로운 시야 (Part 5)</div>
+                <div class="week-main-desc">새 에피소드 오프닝 장면 중심, 스토리 방향 확정 단계</div>
+                <div class="week-meta-row">
+                  <span class="tag main">Main</span>
+                  <span>다음 주 메인 에피소드 초안</span>
+                </div>
+                <div class="week-status-row">
+                  <span class="status-pill-small">기획 중</span>
+                  <div class="week-progress">
+                    <div class="week-progress-bar">
+                      <div class="week-progress-fill" style="width: 28%;"></div>
+                    </div>
+                    <span class="week-progress-label">아이디어 진행률 28%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="week-shorts">
+              <span class="shorts-label">Shorts</span>
+              <div class="shorts-dots">
+                <div class="short-dot"></div>
+                <div class="short-dot"></div>
+                <div class="short-dot"></div>
+              </div>
+              <span class="shorts-caption">오프닝 티저 / 우주선 내부 / 클라이맥스 전개</span>
+            </div>
+          </div>
+
+          <!-- WEEK 3 -->
+          <div class="week-block">
+            <div class="week-header">
+              <span class="week-label-main">WEEK 3</span>
+              <span class="week-date">2024.12.14 · 토 · 22:00</span>
+            </div>
+            <div class="week-main">
+              <div class="week-thumb">
+                <img src="sample.jpg" alt="향후 에피소드 썸네일">
+              </div>
+              <div class="week-main-info">
+                <div class="week-main-title">우주의 끝: 심연 너머 (Part 6)</div>
+                <div class="week-main-desc">시리즈 확장 방향 탐색, 새로운 공간·시간 연출 실험</div>
+                <div class="week-meta-row">
+                  <span class="tag main">Main</span>
+                  <span>장기 플랜용 에피소드 구상</span>
+                </div>
+                <div class="week-status-row">
+                  <span class="status-pill-small">아이디어 스케치</span>
+                  <div class="week-progress">
+                    <div class="week-progress-bar">
+                      <div class="week-progress-fill" style="width: 12%;"></div>
+                    </div>
+                    <span class="week-progress-label">아이디어 스케치 12%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="week-shorts">
+              <span class="shorts-label">Shorts</span>
+              <div class="shorts-dots">
+                <div class="short-dot"></div>
+                <div class="short-dot"></div>
+              </div>
+              <span class="shorts-caption">실험적 장면 테스트 / 사운드 무드 샘플</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Smart Home -->
+      <div class="card">
+        <div class="section-header">
+          <span class="section-title">Studio Environment</span>
+        </div>
+        <div class="home-grid">
+          <div class="device-card active">
+            <svg class="device-icon" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="5"></circle>
+              <line x1="12" y1="1" x2="12" y2="3"></line>
+              <line x1="12" y1="21" x2="12" y2="23"></line>
+              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            </svg>
+            <div style="font-size: 13px; font-weight: 600;">Main Lights</div>
+            <div style="font-size: 11px; color: var(--text-secondary);">On · 80%</div>
+          </div>
+          <div class="device-card">
+            <svg class="device-icon" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2">
+              <path d="M12 2a10 10 0 1 0 10 10 4 4 0 0 1-5-5 4 4 0 0 1-5-5"></path>
+            </svg>
+            <div style="font-size: 13px; font-weight: 600;">Focus Mode</div>
+            <div style="font-size: 11px; color: var(--text-tertiary);">Off</div>
+          </div>
+          <div class="device-card">
+            <svg class="device-icon" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2">
+              <path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"></path>
+            </svg>
+            <div style="font-size: 13px; font-weight: 600;">Temp</div>
+            <div style="font-size: 11px; color: var(--text-tertiary);">24°C</div>
+          </div>
+          <div class="device-card">
+            <svg class="device-icon" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2">
+              <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+              <line x1="8" y1="21" x2="16" y2="21"></line>
+              <line x1="12" y1="17" x2="12" y2="21"></line>
+            </svg>
+            <div style="font-size: 13px; font-weight: 600;">Monitor</div>
+            <div style="font-size: 11px; color: var(--text-tertiary);">Sleep</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
   </div>
 
-  <script src="app.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log('[Portal] Chat script loaded');
+      const chatContainer = document.getElementById('chat-container');
+      const chatInput = document.getElementById('chat-input');
+      const chatSend = document.getElementById('chat-send');
+      const chatImageBtn = document.getElementById('chat-image-btn');
+      const chatImageInput = document.getElementById('chat-image-input');
+      let pendingImageFile = null;       // 아직 전송 안 된 이미지
+      let isSending = false;
+      const originalPlaceholder = chatInput ? chatInput.placeholder : '';
+
+      function scrollToBottom() {
+        if (!chatContainer) return;
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+      }
+
+      function createMessageContent(text) {
+        const fragment = document.createDocumentFragment();
+        const urlRegex = /(https?:\/\/[^\s]+)/g;
+        let lastIndex = 0;
+        let match;
+
+        while ((match = urlRegex.exec(text)) !== null) {
+          if (match.index > lastIndex) {
+            fragment.appendChild(document.createTextNode(text.slice(lastIndex, match.index)));
+          }
+
+          const a = document.createElement('a');
+          a.href = match[0];
+          a.textContent = match[0];
+          a.target = '_blank';
+          a.rel = 'noopener noreferrer';
+          a.style.textDecoration = 'underline';
+          a.style.wordBreak = 'break-all';
+
+          fragment.appendChild(a);
+          lastIndex = urlRegex.lastIndex;
+        }
+
+        if (lastIndex < text.length) {
+          fragment.appendChild(document.createTextNode(text.slice(lastIndex)));
+        }
+
+        return fragment;
+      }
+
+      function addMessageBubble(role, text) {
+        if (!chatContainer) return;
+        const row = document.createElement('div');
+        row.classList.add('chat-row', role === 'me' ? 'me' : 'ai');
+
+        const author = document.createElement('div');
+        author.classList.add('chat-author-inline', role === 'me' ? 'me' : 'ai');
+        author.textContent = role === 'me' ? 'Sowon' : 'Director';
+
+        const bubble = document.createElement('div');
+        bubble.classList.add('chat-bubble', role === 'me' ? 'me' : 'ai');
+        bubble.appendChild(createMessageContent(text));
+
+        // YouTube 링크 미리보기
+        const ytMatch = text.match(/https?:\/\/(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/)([A-Za-z0-9_-]{6,})/);
+        if (ytMatch) {
+          const videoId = ytMatch[1];
+          const url = ytMatch[0];
+
+          const previewLink = document.createElement('a');
+          previewLink.href = url;
+          previewLink.target = '_blank';
+          previewLink.rel = 'noopener noreferrer';
+          previewLink.classList.add('link-preview');
+
+          const thumbWrap = document.createElement('div');
+          thumbWrap.classList.add('link-preview-thumb');
+          const img = document.createElement('img');
+          img.src = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+          img.alt = 'YouTube 썸네일';
+          thumbWrap.appendChild(img);
+
+          const textWrap = document.createElement('div');
+          textWrap.classList.add('link-preview-text');
+          const titleEl = document.createElement('div');
+          titleEl.classList.add('link-preview-title');
+          titleEl.textContent = 'YouTube 링크 미리보기';
+          const urlEl = document.createElement('div');
+          urlEl.classList.add('link-preview-url');
+          urlEl.textContent = url;
+          textWrap.appendChild(titleEl);
+          textWrap.appendChild(urlEl);
+
+          previewLink.appendChild(thumbWrap);
+          previewLink.appendChild(textWrap);
+
+          bubble.appendChild(previewLink);
+        }
+
+        const metaLine = document.createElement('div');
+        metaLine.classList.add('chat-meta-line', role === 'me' ? 'me' : 'ai');
+
+        const meta = document.createElement('span');
+        meta.classList.add('chat-meta');
+        const now = new Date();
+        const hh = String(now.getHours()).padStart(2, '0');
+        const mm = String(now.getMinutes()).padStart(2, '0');
+        meta.textContent = `오늘 · ${hh}:${mm}`;
+
+        metaLine.appendChild(meta);
+
+        row.appendChild(author);
+        row.appendChild(bubble);
+        row.appendChild(metaLine);
+
+        chatContainer.appendChild(row);
+        scrollToBottom();
+      }
+
+      // ✅ 텍스트+이미지를 하나의 말풍선으로 보내는 버전
+      function addCombinedUserBubble(text, imageUrl) {
+        if (!chatContainer) return;
+
+        const row = document.createElement('div');
+        row.classList.add('chat-row', 'me');
+
+        const author = document.createElement('div');
+        author.classList.add('chat-author-inline', 'me');
+        author.textContent = 'Sowon';
+
+        const bubble = document.createElement('div');
+        bubble.classList.add('chat-bubble', 'me');
+
+        if (text) {
+          const textWrap = document.createElement('div');
+          textWrap.appendChild(createMessageContent(text));
+          bubble.appendChild(textWrap);
+        }
+
+        if (imageUrl) {
+          const media = document.createElement('div');
+          media.classList.add('media-attachment');
+          if (text) media.style.marginTop = '10px';
+
+          const img = document.createElement('img');
+          img.src = imageUrl;
+          img.alt = '첨부 이미지';
+          media.appendChild(img);
+          bubble.appendChild(media);
+        }
+
+        const metaLine = document.createElement('div');
+        metaLine.classList.add('chat-meta-line', 'me');
+
+        const meta = document.createElement('span');
+        meta.classList.add('chat-meta');
+        const now = new Date();
+        const hh = String(now.getHours()).padStart(2, '0');
+        const mm = String(now.getMinutes()).padStart(2, '0');
+        meta.textContent = `오늘 · ${hh}:${mm}`;
+
+        metaLine.appendChild(meta);
+
+        row.appendChild(author);
+        row.appendChild(bubble);
+        row.appendChild(metaLine);
+
+        chatContainer.appendChild(row);
+        scrollToBottom();
+      }
+
+      async function sendMessageWithOptionalImage(text, file) {
+        const hasImage = !!file;
+        if (!hasImage) {
+          return await sendMessageToDirector(text);
+        }
+
+        const formData = new FormData();
+        formData.append('text', text || '');
+        formData.append('file', file);
+        formData.append('user_id', 'sowon');
+
+        try {
+          const res = await fetch('http://localhost:8000/director/analyze', {
+            method: 'POST',
+            body: formData
+          });
+
+          console.log('[Portal] Director combined (text+image) status:', res.status);
+
+          if (!res.ok) {
+            return '문자+이미지 분석 중 서버 응답에 문제가 있어. 터미널 로그 한번 확인해줘.';
+          }
+
+          const data = await res.json();
+          console.log('[Portal] Director combined response JSON:', data);
+
+          if (data && typeof data.reply === 'string') return data.reply;
+          if (data && typeof data.summary === 'string') return data.summary;
+
+          return '응답은 왔는데 형식이 예상과 조금 달라. 나중에 로그를 확인해보자.';
+        } catch (err) {
+          console.error('[Portal] Director combined request failed:', err);
+          return '문자+이미지 분석 서버에 연결이 안 돼. 서버 상태를 한번 확인해줘.';
+        }
+      }
+
+      async function sendMessageToDirector(text) {
+        console.log('[Portal] Sending to director (FORMDATA):', text);
+        try {
+          const formData = new FormData();
+          formData.append('text', text || '');
+          formData.append('user_id', 'sowon');
+
+          const res = await fetch('http://localhost:8000/director/analyze', {
+            method: 'POST',
+            body: formData
+          });
+
+          console.log('[Portal] Director response status:', res.status);
+
+          if (!res.ok) {
+            return '부감독 서버에서 에러 응답이 온 것 같아. 터미널 로그 한번만 확인해줘.';
+          }
+
+          const data = await res.json();
+          console.log('[Portal] Director response JSON:', data);
+
+          if (data && typeof data.reply === 'string') {
+            return data.reply;
+          }
+          return '응답 형식이 예상과 달라. 나중에 로그를 한번 확인해보자.';
+        } catch (err) {
+          console.error('[Portal] Director API request failed:', err);
+          return '부감독 서버에 연결이 안 돼. 서버 주소나 상태를 확인해줘.';
+        }
+      }
+
+      async function sendImageToDirector(file) {
+        console.log('[Portal] Sending image to director:', file && file.name);
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('user_id', 'sowon');
+
+        try {
+          const res = await fetch('http://localhost:8000/director/vision', {
+            method: 'POST',
+            body: formData
+          });
+
+          console.log('[Portal] Director image response status:', res.status);
+
+          if (!res.ok) {
+            return '이미지 분석 중 서버 응답에 문제가 있어. 터미널 로그를 한번 확인해줘.';
+          }
+
+          const data = await res.json();
+          console.log('[Portal] Director image response JSON:', data);
+
+          if (data && typeof data.reply === 'string') {
+            return data.reply;
+          }
+          if (data && typeof data.summary === 'string') {
+            return data.summary;
+          }
+          return '이미지 분석은 끝났는데, 응답 형식이 예상과 조금 달라. 나중에 로그를 확인해보자.';
+        } catch (err) {
+          console.error('[Portal] Director image request failed:', err);
+          return '이미지 분석 서버에 연결이 안 돼. 서버 주소나 상태를 확인해줘.';
+        }
+      }
+
+      // Director typing indicator bubble
+      let typingRow = null;
+      function showTypingBubble() {
+        if (!chatContainer) return;
+        if (typingRow) return;
+
+        const row = document.createElement('div');
+        row.classList.add('chat-row', 'ai');
+
+        const author = document.createElement('div');
+        author.classList.add('chat-author-inline', 'ai');
+        author.textContent = 'Director';
+
+        const bubble = document.createElement('div');
+        bubble.classList.add('chat-bubble', 'ai');
+        bubble.style.opacity = '0.7';
+        bubble.style.display = 'inline-flex';
+        bubble.style.alignItems = 'center';
+        bubble.style.gap = '6px';
+
+        const dot = document.createElement('div');
+        dot.textContent = '● ● ●';
+        dot.style.letterSpacing = '2px';
+        dot.style.fontSize = '12px';
+        dot.style.opacity = '0.85';
+
+        bubble.appendChild(dot);
+        row.appendChild(author);
+        row.appendChild(bubble);
+        chatContainer.appendChild(row);
+        typingRow = row;
+        scrollToBottom();
+      }
+
+      function removeTypingBubble() {
+        if (typingRow && typingRow.parentNode) {
+          typingRow.parentNode.removeChild(typingRow);
+        }
+        typingRow = null;
+      }
+
+      async function handleSend() {
+        if (!chatInput || isSending) return;
+        const text = chatInput.value.trim();
+        const hasImage = !!pendingImageFile;
+
+        // 텍스트도 없고 이미지도 없으면 전송 안 함
+        if (!text && !hasImage) return;
+
+        // 말풍선 먼저 보여주기 (텍스트+이미지 한 번에)
+        let objectUrl = null;
+        if (hasImage) {
+          objectUrl = URL.createObjectURL(pendingImageFile);
+          addCombinedUserBubble(text, objectUrl);
+        } else {
+          addMessageBubble('me', text);
+        }
+
+        chatInput.value = '';
+        chatInput.style.height = 'auto';
+        if (chatInput) chatInput.placeholder = originalPlaceholder;
+
+        showTypingBubble();
+
+        isSending = true;
+        if (chatSend) chatSend.disabled = true;
+
+        try {
+          let reply;
+          if (hasImage) {
+            reply = await sendMessageWithOptionalImage(text, pendingImageFile);
+            pendingImageFile = null;
+            if (chatImageInput) chatImageInput.value = '';
+          } else {
+            reply = await sendMessageToDirector(text);
+          }
+          removeTypingBubble();
+          addMessageBubble('ai', reply);
+        } finally {
+          isSending = false;
+          if (chatSend) chatSend.disabled = false;
+          if (objectUrl) {
+            // 메모리 해제
+            setTimeout(() => URL.revokeObjectURL(objectUrl), 60 * 1000);
+          }
+        }
+      }
+
+      if (chatSend) {
+        chatSend.addEventListener('click', (e) => {
+          e.preventDefault();
+          handleSend();
+        });
+      }
+
+      if (chatInput) {
+        const autoResize = () => {
+          chatInput.style.height = 'auto';
+          chatInput.style.height = chatInput.scrollHeight + 'px';
+        };
+
+        chatInput.addEventListener('input', autoResize);
+
+        chatInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' && !e.isComposing) {
+            if (e.shiftKey) {
+              return;
+            }
+            e.preventDefault();
+            handleSend();
+          }
+        });
+      }
+
+      if (chatImageBtn && chatImageInput) {
+        chatImageBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          chatImageInput.click();
+        });
+
+        chatImageInput.addEventListener('change', (e) => {
+          const file = e.target.files && e.target.files[0];
+          if (!file) return;
+
+          // ✅ 여기서는 말풍선 안 만들고, 그냥 "대기중" 상태로만 유지
+          pendingImageFile = file;
+
+          if (chatInput) {
+            chatInput.placeholder = '이미지 1장 선택됨 · 메시지를 적고 Enter를 눌러.';
+          }
+        });
+      }
+
+      // Live Call 패널 토글 + 마이크 캡처 + WebRTC 시그널링 뼈대
+      const callBtn = document.querySelector('.ai-comm-section .action-btn[title="Call"]');
+      const livePanel = document.getElementById('live-call-panel');
+      const liveStatusText = document.getElementById('live-call-status-text');
+      const liveEndBtn = document.getElementById('live-call-end-btn');
+
+      // WebRTC용 전역 상태
+      let livePeer = null;
+      let liveStream = null;
+      let liveOn = false;
+
+      async function createPeerConnectionAndOffer(stream) {
+        const pc = new RTCPeerConnection({
+          iceServers: [
+            { urls: ['stun:stun.l.google.com:19302'] }
+          ]
+        });
+
+        // 마이크 트랙을 PeerConnection에 추가
+        stream.getTracks().forEach((track) => pc.addTrack(track, stream));
+
+        // ICE candidate가 발생하면 서버로 전송
+        pc.onicecandidate = (event) => {
+          if (event.candidate) {
+            fetch('http://localhost:8000/webrtc/ice', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                candidate: event.candidate.candidate,
+                sdpMid: event.candidate.sdpMid,
+                sdpMLineIndex: event.candidate.sdpMLineIndex,
+              }),
+            }).catch((err) => {
+              console.error('[Portal] ICE send error:', err);
+            });
+          }
+        };
+
+        liveStatusText.textContent = '통화 연결 중...';
+
+        // Offer 생성 및 로컬 SDP 설정
+        const offer = await pc.createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: false });
+        await pc.setLocalDescription(offer);
+
+        try {
+          const res = await fetch('http://localhost:8000/webrtc/offer', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sdp: offer.sdp, type: offer.type }),
+          });
+
+          if (!res.ok) {
+            console.error('[Portal] WebRTC offer failed:', res.status);
+            liveStatusText.textContent = '통화 연결 실패';
+            pc.close();
+            return null;
+          }
+
+          const data = await res.json();
+          if (data && data.sdp) {
+            const answerDesc = new RTCSessionDescription({
+              type: data.type || 'answer',
+              sdp: data.sdp,
+            });
+            await pc.setRemoteDescription(answerDesc);
+            console.log('[Portal] WebRTC answer applied');
+          } else {
+            console.warn('[Portal] Unexpected WebRTC answer payload:', data);
+          }
+        } catch (err) {
+          console.error('[Portal] WebRTC signaling error:', err);
+          liveStatusText.textContent = '통화 연결 실패';
+          pc.close();
+          return null;
+        }
+
+        return pc;
+      }
+
+      if (callBtn && livePanel && liveStatusText && liveEndBtn && navigator && navigator.mediaDevices) {
+        const updateLiveUI = () => {
+          if (!liveOn) {
+            livePanel.classList.remove('active');
+            liveStatusText.textContent = '대기 중';
+            if (callBtn) callBtn.classList.remove('call-active');
+            return;
+          }
+
+          livePanel.classList.add('active');
+          if (callBtn) callBtn.classList.add('call-active');
+
+          if (liveStream && livePeer) {
+            liveStatusText.textContent = '통화 중 (마이크 연결됨)';
+          } else if (liveStream) {
+            liveStatusText.textContent = '마이크 연결됨';
+          } else {
+            liveStatusText.textContent = '연결 준비 중';
+          }
+        };
+
+        const stopLiveStreamAndPeer = () => {
+          if (liveStream) {
+            liveStream.getTracks().forEach((t) => t.stop());
+            liveStream = null;
+          }
+          if (livePeer) {
+            livePeer.close();
+            livePeer = null;
+          }
+        };
+
+        const startLiveCall = async () => {
+          try {
+            if (!liveStream) {
+              liveStatusText.textContent = '마이크 요청 중...';
+              const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+              liveStream = stream;
+            }
+            liveOn = true;
+            updateLiveUI();
+
+            // WebRTC 시그널링 뼈대 시작
+            livePeer = await createPeerConnectionAndOffer(liveStream);
+            if (!livePeer) {
+              // 실패 시 통화 종료
+              liveOn = false;
+              stopLiveStreamAndPeer();
+            }
+            updateLiveUI();
+          } catch (err) {
+            console.error('[Portal] Live call mic error:', err);
+            liveOn = false;
+            stopLiveStreamAndPeer();
+            liveStatusText.textContent = '마이크 권한이 거부됐어.';
+          }
+        };
+
+        const endLiveCall = () => {
+          liveOn = false;
+          stopLiveStreamAndPeer();
+          updateLiveUI();
+        };
+
+        updateLiveUI();
+
+        callBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          if (!liveOn) startLiveCall();
+          else endLiveCall();
+        });
+
+        liveEndBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          endLiveCall();
+        });
+      }
+
+      scrollToBottom();
+    });
+  </script>
+
 </body>
+
 </html>
