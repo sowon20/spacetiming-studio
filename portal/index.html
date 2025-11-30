@@ -97,6 +97,7 @@
         </div>
 
         <div class="chat-container" id="chat-container"></div>
+        <div class="attachment-bar" id="chat-attachment-bar"></div>
 
       <div class="input-area">
         <button class="action-btn" id="chat-image-btn" style="width: 32px; height: 32px; border: none;">
@@ -108,7 +109,7 @@
           </svg>
         </button>
         <!-- Hidden file input for image upload -->
-        <input type="file" id="chat-image-input" accept="image/*" style="display: none;">
+        <input type="file" id="chat-image-input" accept="image/*" multiple style="display: none;">
         <textarea class="input-field" id="chat-input" rows="1" placeholder="AI에게 메시지 보내기..."></textarea>
         <button class="action-btn primary" id="chat-send">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
@@ -331,6 +332,8 @@
       </div>
 
     </div>
+    <div class="image-lightbox" id="image-lightbox">
+    <img id="image-lightbox-img" src="" alt="preview">
   </div>
 
   <script>
@@ -341,9 +344,48 @@
       const chatSend = document.getElementById('chat-send');
       const chatImageBtn = document.getElementById('chat-image-btn');
       const chatImageInput = document.getElementById('chat-image-input');
-      let pendingImageFile = null;       // 아직 전송 안 된 이미지
+      const attachmentBar = document.getElementById('chat-attachment-bar');
+      const imageLightbox = document.getElementById('image-lightbox');
+      const imageLightboxImg = document.getElementById('image-lightbox-img');
+      let pendingImages = []; // { id, file, objectUrl }
       let isSending = false;
       const originalPlaceholder = chatInput ? chatInput.placeholder : '';
+      function renderAttachmentBar() {
+        if (!attachmentBar) return;
+
+        attachmentBar.innerHTML = '';
+
+        if (!pendingImages.length) {
+          attachmentBar.style.display = 'none';
+          return;
+        }
+
+        attachmentBar.style.display = 'flex';
+
+        pendingImages.forEach((item) => {
+          const wrap = document.createElement('div');
+          wrap.classList.add('attachment-thumb');
+
+          const img = document.createElement('img');
+          img.src = item.objectUrl;
+          img.alt = '첨부 이미지';
+
+          const btn = document.createElement('button');
+          btn.classList.add('attachment-remove');
+          btn.textContent = '×';
+          btn.addEventListener('click', () => {
+            pendingImages = pendingImages.filter((p) => p.id !== item.id);
+            renderAttachmentBar();
+            if (!pendingImages.length && chatInput) {
+              chatInput.placeholder = originalPlaceholder;
+            }
+          });
+
+          wrap.appendChild(img);
+          wrap.appendChild(btn);
+          attachmentBar.appendChild(wrap);
+        });
+      }
 
       function scrollToBottom() {
         if (!chatContainer) return;
@@ -449,8 +491,8 @@
         scrollToBottom();
       }
 
-      // ✅ 텍스트+이미지를 하나의 말풍선으로 보내는 버전
-      function addCombinedUserBubble(text, imageUrl) {
+      // ✅ 텍스트+이미지를 하나의 말풍선으로 보내는 버전 (다중 이미지 지원)
+      function addCombinedUserBubble(text, imageUrls) {
         if (!chatContainer) return;
 
         const row = document.createElement('div');
@@ -469,16 +511,24 @@
           bubble.appendChild(textWrap);
         }
 
-        if (imageUrl) {
-          const media = document.createElement('div');
-          media.classList.add('media-attachment');
-          if (text) media.style.marginTop = '10px';
+        if (imageUrls && imageUrls.length) {
+          const mediaGrid = document.createElement('div');
+          mediaGrid.classList.add('media-attachment-grid');
+          if (text) mediaGrid.style.marginTop = '10px';
 
-          const img = document.createElement('img');
-          img.src = imageUrl;
-          img.alt = '첨부 이미지';
-          media.appendChild(img);
-          bubble.appendChild(media);
+          imageUrls.forEach((url) => {
+            const cell = document.createElement('div');
+            cell.classList.add('media-attachment');
+
+            const img = document.createElement('img');
+            img.src = url;
+            img.alt = '첨부 이미지';
+            cell.appendChild(img);
+
+            mediaGrid.appendChild(cell);
+          });
+
+          bubble.appendChild(mediaGrid);
         }
 
         const metaLine = document.createElement('div');
@@ -646,16 +696,15 @@
       async function handleSend() {
         if (!chatInput || isSending) return;
         const text = chatInput.value.trim();
-        const hasImage = !!pendingImageFile;
+        const hasImages = pendingImages.length > 0;
 
         // 텍스트도 없고 이미지도 없으면 전송 안 함
-        if (!text && !hasImage) return;
+        if (!text && !hasImages) return;
 
-        // 말풍선 먼저 보여주기 (텍스트+이미지 한 번에)
-        let objectUrl = null;
-        if (hasImage) {
-          objectUrl = URL.createObjectURL(pendingImageFile);
-          addCombinedUserBubble(text, objectUrl);
+        let objectUrls = [];
+        if (hasImages) {
+          objectUrls = pendingImages.map((p) => p.objectUrl);
+          addCombinedUserBubble(text, objectUrls);
         } else {
           addMessageBubble('me', text);
         }
@@ -671,9 +720,21 @@
 
         try {
           let reply;
-          if (hasImage) {
-            reply = await sendMessageWithOptionalImage(text, pendingImageFile);
-            pendingImageFile = null;
+          if (hasImages) {
+            const mainFile = pendingImages[0].file; // 대표 1장만 서버로 전송
+            reply = await sendMessageWithOptionalImage(text, mainFile);
+
+            pendingImages.forEach((p) => {
+              setTimeout(() => {
+                try {
+                  URL.revokeObjectURL(p.objectUrl);
+                } catch (e) {
+                  console.warn('[Portal] revokeObjectURL 실패:', e);
+                }
+              }, 60 * 1000);
+            });
+            pendingImages = [];
+            renderAttachmentBar();
             if (chatImageInput) chatImageInput.value = '';
           } else {
             reply = await sendMessageToDirector(text);
@@ -683,10 +744,6 @@
         } finally {
           isSending = false;
           if (chatSend) chatSend.disabled = false;
-          if (objectUrl) {
-            // 메모리 해제
-            setTimeout(() => URL.revokeObjectURL(objectUrl), 60 * 1000);
-          }
         }
       }
 
@@ -723,15 +780,29 @@
         });
 
         chatImageInput.addEventListener('change', (e) => {
-          const file = e.target.files && e.target.files[0];
-          if (!file) return;
+          const files = e.target.files;
+          if (!files || !files.length) return;
 
-          // ✅ 여기서는 말풍선 안 만들고, 그냥 "대기중" 상태로만 유지
-          pendingImageFile = file;
+          const MAX_IMAGES = 10;
+
+          Array.from(files).forEach((file) => {
+            if (pendingImages.length >= MAX_IMAGES) return;
+            const objectUrl = URL.createObjectURL(file);
+            pendingImages.push({
+              id: Date.now().toString() + Math.random().toString(16).slice(2),
+              file,
+              objectUrl,
+            });
+          });
+
+          renderAttachmentBar();
 
           if (chatInput) {
-            chatInput.placeholder = '이미지 1장 선택됨 · 메시지를 적고 Enter를 눌러.';
+            chatInput.placeholder = `이미지 ${pendingImages.length}장 선택됨 · 메시지를 적고 Enter를 눌러.`;
           }
+
+          // 같은 파일 다시 선택할 수 있도록
+          chatImageInput.value = '';
         });
       }
 

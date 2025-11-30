@@ -461,6 +461,7 @@
       border: 1px solid rgba(255, 255, 255, 0.25);
       color: #FFFFFF;
       border-bottom-left-radius: 4px;
+      max-width: 92%;
     }
 
     .chat-bubble.me {
@@ -471,6 +472,7 @@
       border: none;
       border-bottom-right-radius: 4px;
       box-shadow: 0 8px 20px rgba(15, 23, 42, 0.22);
+      max-width: 92%;
     }
 
     .media-attachment {
@@ -1054,3 +1056,89 @@
       color: var(--text-tertiary);
       word-break: break-all;
     }
+/* ----------------------------------------- */
+/* Chat Attachment Bar (Multi-Image Support) */
+/* ----------------------------------------- */
+
+.attachment-bar {
+  display: none;
+  gap: 8px;
+  padding: 6px 4px;
+  margin-bottom: 8px;
+  overflow-x: auto;
+}
+
+.attachment-thumb {
+  position: relative;
+  width: 60px;
+  height: 60px;
+  border-radius: 10px;
+  overflow: hidden;
+  flex: 0 0 auto;
+  border: 1px solid rgba(234, 229, 221, 0.9);
+  background: #fff;
+}
+
+.attachment-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.attachment-remove {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0,0,0,0.55);
+  color: #fff;
+  font-size: 11px;
+  line-height: 18px;
+  cursor: pointer;
+}
+
+.media-attachment-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.media-attachment {
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid rgba(234,229,221,0.9);
+}
+
+.media-attachment img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* ----------------------------------------- */
+/* Image Lightbox (click to enlarge)        */
+/* ----------------------------------------- */
+
+.image-lightbox {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.65);
+  z-index: 999;
+  padding: 24px;
+}
+
+.image-lightbox img {
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: 16px;
+  box-shadow: 0 18px 40px rgba(0,0,0,0.55);
+}
