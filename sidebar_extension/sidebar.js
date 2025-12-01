@@ -24,6 +24,39 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     });
   });
+  
+  // ==========================
+  // 헤더 / 서버 상태 (까만 박스)
+  // ==========================
+  const statusPill = document.getElementById("studioStatusPill");
+  const statusText = document.getElementById("studioStatusText");
+
+  function setStudioStatus(label, mode) {
+    if (!statusPill || !statusText) return;
+    statusText.textContent = label;
+    statusPill.classList.remove("online", "offline", "issue");
+    if (mode) statusPill.classList.add(mode);
+  }
+
+  async function pingStudioStatus() {
+    if (!statusPill || !statusText) return;
+
+    try {
+      const res = await fetch("https://sowon.mooo.com/health");
+      if (res.ok) {
+        setStudioStatus("ONLINE", "online");
+      } else {
+        setStudioStatus("ISSUE", "issue");
+      }
+    } catch (e) {
+      console.error(e);
+      setStudioStatus("OFFLINE", "offline");
+    }
+  }
+
+  // 페이지 열릴 때 한 번, 이후 30초마다 체크
+  pingStudioStatus();
+  setInterval(pingStudioStatus, 30000);
 
   // ==========================
   // 대시보드 더미 데이터 (나중에 API로 교체)

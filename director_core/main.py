@@ -1,6 +1,7 @@
 from __future__ import annotations
 from .memory_store import save_memory_events, load_recent_memories
-from director_core.soul_loader import (
+from .imported_memory_loader import load_imported_memories
+from .soul_loader import (
     build_core_system_prompt,
     build_timeline_context,
 )
@@ -356,6 +357,18 @@ def analyze_text_with_llm(req: AnalyzeRequest) -> AnalyzeResponse:
         except Exception:
             logger.exception("최근 기억 불러오는 중 에러 발생 (무시하고 계속 진행)")
             recent_memories = []
+
+        # 🔹 불탄 chatGPT 방에서 가져온 오래된 기억들도 같이 섞어 준다.
+        try:
+            imported_memories = load_imported_memories(limit=30)
+            # 혹시 나중에 구분하고 싶으면 type/tags에 표시
+            for m in imported_memories:
+                m.setdefault("tags", [])
+                if "burned_room" not in m["tags"]:
+                    m["tags"].append("burned_room")
+            recent_memories.extend(imported_memories)
+        except Exception:
+            logger.exception("불탄방 imported memories 합치는 중 에러 발생 (무시하고 계속 진행)")
 
         try:
             model = get_gemini_model()
