@@ -417,6 +417,8 @@
       font-size: 14px;
       line-height: 1.5;
       position: relative;
+      overflow: hidden;
+      display: inline-block;
     }
 
     .chat-author {
@@ -464,6 +466,19 @@
       max-width: 92%;
     }
 
+    /* When a bubble contains multiple images, limit bubble width to 2/3 of the chat area */
+    /* Uses :has() to detect child grid; supported in modern Chromium / Safari */
+    .chat-bubble:has(.media-attachment-grid) {
+      max-width: 66.666%;
+    }
+
+    /* Fallback/explicit classes for browsers without :has() support */
+    .chat-bubble.media-count-1 { max-width: 36%; }
+    .chat-bubble.media-count-2 { max-width: 48%; }
+    .chat-bubble.media-count-3 { max-width: 56%; }
+    .chat-bubble.media-count-4 { max-width: 66.666%; }
+    .chat-bubble.media-count-5 { max-width: 66.666%; }
+
     .chat-bubble.me {
       background: #E6D5B8;
       /* soft gold/beige tile */
@@ -475,11 +490,27 @@
       max-width: 92%;
     }
 
+    /* More specific rules to override generic .chat-bubble.me/.ai max-widths
+       These ensure media-count classes win even when .chat-bubble.me/.ai
+       are defined later in the stylesheet. */
+    .chat-row.me .chat-bubble.media-count-1 { max-width: 36% !important; }
+    .chat-row.me .chat-bubble.media-count-2 { max-width: 48% !important; }
+    .chat-row.me .chat-bubble.media-count-3 { max-width: 56% !important; }
+    .chat-row.me .chat-bubble.media-count-4 { max-width: 66.666% !important; }
+    .chat-row.me .chat-bubble.media-count-5 { max-width: 66.666% !important; }
+
+    .chat-row.ai .chat-bubble.media-count-1 { max-width: 36% !important; }
+    .chat-row.ai .chat-bubble.media-count-2 { max-width: 48% !important; }
+    .chat-row.ai .chat-bubble.media-count-3 { max-width: 56% !important; }
+    .chat-row.ai .chat-bubble.media-count-4 { max-width: 66.666% !important; }
+    .chat-row.ai .chat-bubble.media-count-5 { max-width: 66.666% !important; }
+
     .media-attachment {
       margin-top: 8px;
       border-radius: 12px;
       overflow: hidden;
-      max-width: 200px;
+      max-width: 100%;
+      min-width: 0;
       border: 1px solid var(--border-color);
     }
 
@@ -1103,9 +1134,23 @@
 
 .media-attachment-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
-  gap: 6px;
+  /* show up to 5 thumbnails per row on wide viewports */
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
   margin-top: 10px;
+}
+
+/* Responsive fallbacks: fewer columns on smaller screens */
+@media (max-width: 1100px) {
+  .media-attachment-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .media-attachment-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 .media-attachment {
@@ -1141,4 +1186,29 @@
   max-height: 100%;
   border-radius: 16px;
   box-shadow: 0 18px 40px rgba(0,0,0,0.55);
+}
+
+.lightbox-close {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.6);
+  color: #F9F8F6;
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  z-index: 1000;
+}
+
+.lightbox-close:hover {
+  background: rgba(0, 0, 0, 0.8);
+  transform: scale(1.1);
 }

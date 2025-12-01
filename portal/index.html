@@ -110,7 +110,7 @@
         </button>
         <!-- Hidden file input for image upload -->
         <input type="file" id="chat-image-input" accept="image/*" multiple style="display: none;">
-        <textarea class="input-field" id="chat-input" rows="1" placeholder="AI에게 메시지 보내기..."></textarea>
+        <textarea class="input-field" id="chat-input" rows="1" placeholder="부감독에게 메시지 보내기..."></textarea>
         <button class="action-btn primary" id="chat-send">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
             stroke="currentColor" stroke-width="2">
@@ -333,6 +333,7 @@
 
     </div>
     <div class="image-lightbox" id="image-lightbox">
+    <button class="lightbox-close" id="lightbox-close" aria-label="닫기">×</button>
     <img id="image-lightbox-img" src="" alt="preview">
   </div>
 
@@ -350,6 +351,241 @@
       let pendingImages = []; // { id, file, objectUrl }
       let isSending = false;
       const originalPlaceholder = chatInput ? chatInput.placeholder : '';
+
+      // === 대화 히스토리 상태 ===
+      let historyCursor = null;       // 가장 오래된 메시지의 cursor/id
+      let isLoadingHistory = false;
+      let hasMoreHistory = true;      // 더 가져올 게 없으면 false
+
+      // 서버에서 히스토리 가져오기 (최신 n개)
+      async function fetchHistory(options = {}) {
+        // options: { before: cursor, limit: 30 }
+        const params = new URLSearchParams();
+        if (options.before) params.set('before', options.before);
+        if (options.limit) params.set('limit', options.limit);
+
+        const url = 'http://localhost:8000/director/history' + (params.toString() ? `?${params.toString()}` : '');
+
+        try {
+          const res = await fetch(url);
+          if (!res.ok) {
+            console.warn('[Portal] history fetch not ok:', res.status);
+            return [];
+          }
+          const data = await res.json();
+          // 기대 형식: [{ id, role: "user"|"assistant", text, timestamp }]
+          return Array.isArray(data) ? data : [];
+        } catch (e) {
+          console.warn('[Portal] history fetch failed:', e);
+          return [];
+        }
+      }
+
+      // 히스토리 메시지들을 렌더 (prepend 옵션)
+      function renderHistoryMessages(messages, { prepend = false } = {}) {
+        if (!chatContainer || !messages.length) return;
+
+        const fragment = document.createDocumentFragment();
+
+        messages.forEach((msg) => {
+          const row = document.createElement('div');
+          const role = msg.role === 'user' ? 'me' : 'ai';
+
+          row.classList.add('chat-row', role);
+
+          const author = document.createElement('div');
+          author.classList.add('chat-author-inline', role);
+          author.textContent = role === 'me' ? 'Sowon' : 'Director';
+
+          const bubble = document.createElement('div');
+          bubble.classList.add('chat-bubble', role);
+          bubble.appendChild(createMessageContent(msg.text || ''));
+
+          const metaLine = document.createElement('div');
+          metaLine.classList.add('chat-meta-line', role);
+          const meta = document.createElement('span');
+          meta.classList.add('chat-meta');
+
+          // timestamp가 있으면 거기서 시간 뽑고, 없으면 현재 시간
+          const t = msg.timestamp ? new Date(msg.timestamp) : new Date();
+          const hh = String(t.getHours()).padStart(2, '0');
+          const mm = String(t.getMinutes()).padStart(2, '0');
+          meta.textContent = `오늘 · ${hh}:${mm}`;
+
+          metaLine.appendChild(meta);
+
+          row.appendChild(author);
+          row.appendChild(bubble);
+          row.appendChild(metaLine);
+
+          fragment.appendChild(row);
+        });
+
+        if (prepend) {
+          // 위에 붙이기
+          chatContainer.insertBefore(fragment, chatContainer.firstChild);
+        } else {
+          // 아래에 붙이기
+          chatContainer.appendChild(fragment);
+        }
+
+        scrollToBottom();
+      }
+
+      // 첫 진입 시: 최근 히스토리 불러오기
+      async function loadInitialHistory() {
+        if (!chatContainer) return;
+        isLoadingHistory = true;
+
+        const msgs = await fetchHistory({ limit: 30 });
+
+        if (!msgs.length) {
+          // 히스토리가 하나도 없으면, 기존처럼 인사 한 줄
+          addMessageBubble('ai', '부감독 온라인. 오늘은 뭐부터 같이 할까?');
+          historyCursor = null;
+          hasMoreHistory = false;
+        } else {
+          // 최신순으로 온다고 가정했을 때, 오래된 것부터 렌더
+          // (서버 응답 정렬에 따라 조정 가능)
+          msgs.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+          renderHistoryMessages(msgs, { prepend: false });
+
+          // 제일 오래된 메시지의 id를 cursor로 저장
+          historyCursor = msgs[0].id || null;
+          hasMoreHistory = true;
+        }
+
+        isLoadingHistory = false;
+      }
+
+      // 위로 스크롤할 때, 더 예전 히스토리 로딩
+      async function loadOlderHistoryIfNeeded() {
+        if (!chatContainer || isLoadingHistory || !hasMoreHistory) return;
+        // 스크롤이 거의 맨 위에 왔을 때
+        if (chatContainer.scrollTop > 50) return;
+
+        if (!historyCursor) {
+          // cursor 없으면 더 가져올 게 없는 상태로 간주
+          hasMoreHistory = false;
+          return;
+        }
+
+        isLoadingHistory = true;
+
+        const prevHeight = chatContainer.scrollHeight;
+        const msgs = await fetchHistory({ before: historyCursor, limit: 30 });
+
+        if (!msgs.length) {
+          hasMoreHistory = false;
+          isLoadingHistory = false;
+          return;
+        }
+
+        msgs.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+        renderHistoryMessages(msgs, { prepend: true });
+
+        // 새로 붙인 뒤에도 화면이 튀지 않도록 스크롤 보정
+        const newHeight = chatContainer.scrollHeight;
+        chatContainer.scrollTop = newHeight - prevHeight;
+
+        historyCursor = msgs[0].id || historyCursor;
+        isLoadingHistory = false;
+      }
+
+      // 스크롤 이벤트로 "위로 올리면 더 불러오기"
+      if (chatContainer) {
+        chatContainer.addEventListener('scroll', () => {
+          loadOlderHistoryIfNeeded();
+        });
+      }
+
+      // ✅ 처음 진입 시 히스토리부터 로드
+      if (chatContainer) {
+        loadInitialHistory();
+      }
+
+      // 라이트박스 열기/닫기
+      function openLightbox(imgSrc) {
+        if (!imageLightbox || !imageLightboxImg) return;
+        imageLightboxImg.src = imgSrc;
+        imageLightbox.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+      }
+
+      function closeLightbox() {
+        if (!imageLightbox || !imageLightboxImg) return;
+        imageLightbox.style.display = 'none';
+        document.body.style.overflow = '';
+        // 메모리 정리
+        setTimeout(() => {
+          imageLightboxImg.src = '';
+        }, 200);
+      }
+
+      // 라이트박스 이벤트 리스너
+      const lightboxClose = document.getElementById('lightbox-close');
+      if (imageLightbox) {
+        imageLightbox.addEventListener('click', (e) => {
+          // 배경 클릭 시에만 닫기
+          if (e.target === imageLightbox) {
+            closeLightbox();
+          }
+        });
+
+        if (lightboxClose) {
+          lightboxClose.addEventListener('click', (e) => {
+            e.stopPropagation();
+            closeLightbox();
+          });
+        }
+
+        // ESC 키로 닫기
+        document.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape' && imageLightbox.style.display === 'flex') {
+            closeLightbox();
+          }
+        });
+      }
+
+      // 모든 이미지에 클릭 이벤트 추가 (이미지 로드 후)
+      function attachImageClickHandlers() {
+        // Hero 섹션 썸네일
+        const heroThumb = document.querySelector('.video-preview img');
+        if (heroThumb) {
+          heroThumb.style.cursor = 'pointer';
+          heroThumb.addEventListener('click', () => openLightbox(heroThumb.src));
+        }
+
+        // Week 썸네일들
+        document.querySelectorAll('.week-thumb img').forEach((img) => {
+          img.style.cursor = 'pointer';
+          img.addEventListener('click', () => openLightbox(img.src));
+        });
+
+        // Attachment bar 썸네일
+        document.querySelectorAll('.attachment-thumb img').forEach((img) => {
+          img.style.cursor = 'pointer';
+          img.addEventListener('click', (e) => {
+            e.stopPropagation();
+            openLightbox(img.src);
+          });
+        });
+
+        // YouTube 링크 미리보기 썸네일
+        document.querySelectorAll('.link-preview-thumb img').forEach((img) => {
+          img.style.cursor = 'pointer';
+          img.addEventListener('click', (e) => {
+            e.preventDefault();
+            openLightbox(img.src);
+          });
+        });
+
+        // 채팅 메시지 첨부 이미지
+        document.querySelectorAll('.media-attachment img').forEach((img) => {
+          img.style.cursor = 'pointer';
+          img.addEventListener('click', () => openLightbox(img.src));
+        });
+      }
       function renderAttachmentBar() {
         if (!attachmentBar) return;
 
@@ -369,6 +605,8 @@
           const img = document.createElement('img');
           img.src = item.objectUrl;
           img.alt = '첨부 이미지';
+          img.style.cursor = 'pointer';
+          img.addEventListener('click', () => openLightbox(item.objectUrl));
 
           const btn = document.createElement('button');
           btn.classList.add('attachment-remove');
@@ -452,6 +690,11 @@
           const img = document.createElement('img');
           img.src = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
           img.alt = 'YouTube 썸네일';
+          img.style.cursor = 'pointer';
+          img.addEventListener('click', (e) => {
+            e.preventDefault();
+            openLightbox(img.src);
+          });
           thumbWrap.appendChild(img);
 
           const textWrap = document.createElement('div');
@@ -523,12 +766,17 @@
             const img = document.createElement('img');
             img.src = url;
             img.alt = '첨부 이미지';
+            img.style.cursor = 'pointer';
+            img.addEventListener('click', () => openLightbox(url));
             cell.appendChild(img);
 
             mediaGrid.appendChild(cell);
           });
 
           bubble.appendChild(mediaGrid);
+          // add media-count class for dynamic width control (1..5)
+          const countClass = 'media-count-' + Math.min(imageUrls.length, 5);
+          bubble.classList.add(countClass);
         }
 
         const metaLine = document.createElement('div');
@@ -549,6 +797,25 @@
 
         chatContainer.appendChild(row);
         scrollToBottom();
+        // make sure media-count classes are normalized
+        updateMediaCountClasses();
+      }
+
+      // Normalize and assign media-count-* classes for all chat bubbles.
+      function updateMediaCountClasses() {
+        document.querySelectorAll('.chat-bubble').forEach((bubble) => {
+          // remove any existing media-count-* classes safely
+          Array.from(bubble.classList).forEach((c) => {
+            if (c.startsWith('media-count-')) bubble.classList.remove(c);
+          });
+
+          const grid = bubble.querySelector('.media-attachment-grid');
+          if (grid) {
+            const imgs = grid.querySelectorAll('img').length || 0;
+            const cls = 'media-count-' + Math.min(Math.max(imgs, 1), 5);
+            bubble.classList.add(cls);
+          }
+        });
       }
 
       async function sendMessageWithOptionalImage(text, file) {
@@ -962,6 +1229,27 @@
           endLiveCall();
         });
       }
+
+      // 초기 이미지 클릭 핸들러 연결
+      attachImageClickHandlers();
+
+      // 동적으로 추가되는 이미지를 위해 MutationObserver 사용
+      const observer = new MutationObserver(() => {
+        attachImageClickHandlers();
+        updateMediaCountClasses();
+      });
+
+      if (chatContainer) {
+        observer.observe(chatContainer, {
+          childList: true,
+          subtree: true
+        });
+      }
+
+      // Resize listener to keep layout consistent on viewport changes
+      window.addEventListener('resize', () => {
+        updateMediaCountClasses();
+      });
 
       scrollToBottom();
     });

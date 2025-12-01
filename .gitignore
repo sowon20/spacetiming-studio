@@ -18,3 +18,8 @@ veo_agent/keys/
 .env*
 *.env
 소원메모
+
+# Akashic raw logs / 개인 히스토리
+akashic/raw/
+akashic/imports/
+portal_history/
