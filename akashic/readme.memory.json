@@ -1,0 +1,22 @@
+{
+  "description": "시공간 스튜디오 부감독 기억 시스템 개요",
+  "layers": {
+    "core_soul": {
+      "path": "akashic/soul/*.soul",
+      "usage": "소원과 부감독의 정체성, 말투, 관계, 일하는 방식 같은 고정 프로필을 저장한다. LLM system 프롬프트에 항상 포함한다."
+    },
+    "timeline": {
+      "path": "akashic/timeline/*.json",
+      "usage": "인생/프로젝트의 중요한 사건, 전환점, 챕터를 기록한다. 나중에 비슷한 상황을 떠올리거나 맥락 설명할 때 참고한다."
+    },
+    "recent_chat": {
+      "path": "portal_history/sowon.chat.jsonl",
+      "usage": "실제 대화 로그 전체. LLM에는 최근 N개만 컨텍스트로 넣고, 파일은 계속 축적한다."
+    }
+  },
+  "notes": [
+    "불탄 채팅방, 라즈베리 부감독 1호기 같은 큰 사건은 timeline_event로 남긴다.",
+    "소원/부감독의 성격, 원칙은 .soul에만 적고 코드에서 불러온다.",
+    "A/B/C(생계/프로젝트/회복)는 우선순위 대화할 때만 사용하고, 평소 대화는 자유롭게 흐르게 둔다."
+  ]
+}

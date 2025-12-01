@@ -1,6 +1,9 @@
 from __future__ import annotations
 from .memory_store import save_memory_events, load_recent_memories
-from director_core.soul_loader import build_core_system_prompt
+from director_core.soul_loader import (
+    build_core_system_prompt,
+    build_timeline_context,
+)
 
 import os
 import json
@@ -331,12 +334,18 @@ def analyze_text_with_llm(req: AnalyzeRequest) -> AnalyzeResponse:
                 ]
                 memories_block = "Recent long-term memories:\n" + "\n".join(lines)
 
+            # 타임라인 컨텍스트 빌드
+            timeline_block = build_timeline_context(user_text=text, max_events=5)
+
             user_prompt = f"Director raw note (Korean):\n{text}"
 
             combined_parts = []
             if memories_block:
                 combined_parts.append("[Recent memories]")
                 combined_parts.append(memories_block)
+            if timeline_block:
+                combined_parts.append("[Timeline context]")
+                combined_parts.append(timeline_block)
             combined_parts.append("[Director message]")
             combined_parts.append(user_prompt)
 
