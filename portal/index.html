@@ -364,7 +364,7 @@
         if (options.before) params.set('before', options.before);
         if (options.limit) params.set('limit', options.limit);
 
-        const url = 'http://localhost:8000/director/history' + (params.toString() ? `?${params.toString()}` : '');
+        const url = '/director/history' + (params.toString() ? `?${params.toString()}` : '');
 
         try {
           const res = await fetch(url);
@@ -830,7 +830,7 @@
         formData.append('user_id', 'sowon');
 
         try {
-          const res = await fetch('http://localhost:8000/director/analyze', {
+          const res = await fetch('/director/analyze', {
             method: 'POST',
             body: formData
           });
@@ -861,7 +861,7 @@
           formData.append('text', text || '');
           formData.append('user_id', 'sowon');
 
-          const res = await fetch('http://localhost:8000/director/analyze', {
+          const res = await fetch('/director/analyze', {
             method: 'POST',
             body: formData
           });
@@ -892,7 +892,7 @@
         formData.append('user_id', 'sowon');
 
         try {
-          const res = await fetch('http://localhost:8000/director/vision', {
+          const res = await fetch('/director/vision', {
             method: 'POST',
             body: formData
           });
@@ -1097,7 +1097,7 @@
         // ICE candidate가 발생하면 서버로 전송
         pc.onicecandidate = (event) => {
           if (event.candidate) {
-            fetch('http://localhost:8000/webrtc/ice', {
+            fetch('/webrtc/ice', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -1118,7 +1118,7 @@
         await pc.setLocalDescription(offer);
 
         try {
-          const res = await fetch('http://localhost:8000/webrtc/offer', {
+          const res = await fetch('/webrtc/offer', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ sdp: offer.sdp, type: offer.type }),

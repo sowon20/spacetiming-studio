@@ -1,5 +1,7 @@
 from fastapi import FastAPI, Form, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles      # ✅ 여기 추가
+from fastapi.responses import RedirectResponse  # ✅ 여기 추가
 from director_core.models import AnalyzeRequest
 from director_core.main import analyze_text_with_llm
 
@@ -10,6 +12,13 @@ from datetime import datetime
 import json
 
 app = FastAPI()
+
+# ✅ 포털 정적 파일 서빙 + 루트 리다이렉트
+app.mount("/portal", StaticFiles(directory="portal", html=True), name="portal")
+
+@app.get("/")
+async def root():
+    return RedirectResponse(url="/portal")
 
 app.add_middleware(
     CORSMiddleware,
