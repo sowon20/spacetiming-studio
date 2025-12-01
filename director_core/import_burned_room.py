@@ -3,8 +3,8 @@
 
 사용법 (프로젝트 루트에서):
 
-    python -m director_core.import_burned_room \\
-      --input "akashic/raw/imports/burned_room_251128.txt" \\
+    python -m director_core.import_burned_room \
+      --input "akashic/raw/imports/burned_room_251128.txt" \
       --output "akashic/raw/imports/burned_room_251128.memory.jsonl"
 
 - input:  불탄 방 대화 로그(txt)
@@ -69,7 +69,7 @@ def chunk_lines(lines: List[str], max_lines: int = CHUNK_LINES) -> List[str]:
 def build_import_prompt(chunk_text: str) -> str:
     """
     불탄 방 로그 일부(chunk_text)를 주면,
-    여기서 진짜 중요한 기억만 골라 memory_events로 뽑아달라는 지시문.
+    여기서 진짜 중요한 기억만 골라 memory_events로 뽑아달라는 지시문을 만든다.
     """
     return f"""
 너는 소원과의 옛날 대화 로그(불탄 chatGPT 방)를 복원하는 작업을 돕는 소울 아카이브 정리 담당자야.
@@ -108,7 +108,7 @@ def build_import_prompt(chunk_text: str) -> str:
 --- 원본 시작 ---
 {chunk_text}
 --- 원본 끝 ---
-""""
+""".strip()
 
 
 def extract_memory_events_from_chunk(model, chunk_text: str) -> List[Dict[str, Any]]:
@@ -128,6 +128,7 @@ def extract_memory_events_from_chunk(model, chunk_text: str) -> List[Dict[str, A
         obj = json.loads(json_str)
     except Exception as e:  # pragma: no cover
         print("⚠️ JSON 파싱 실패, 이 청크는 건너뜀:", e)
+        print("  raw_text snippet:", raw_text[:200].replace("\n", " "))
         return []
 
     events = obj.get("memory_events") or []
