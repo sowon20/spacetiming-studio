@@ -12,6 +12,7 @@ import json
 import re
 import logging
 from typing import Optional
+from pathlib import Path
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -229,7 +230,52 @@ SYSTEM_PROMPT = load_base_system_prompt()
 core_soul_prompt = build_core_system_prompt()
 if core_soul_prompt:
     SYSTEM_PROMPT = SYSTEM_PROMPT + "\n\n" + core_soul_prompt
-    
+
+
+def load_recent_dialogue(user_id: str, limit: int = 40) -> str:
+    """
+    portal_history/{user_id}.chat.jsonl 에서 최근 대화 몇 줄을 읽어서
+    LLM 프롬프트에 붙일 수 있는 텍스트 블록으로 만든다.
+      예시:
+        {"role": "user", "content": "..."}
+        {"role": "assistant", "content": "..."}
+    """
+    try:
+        history_path = Path("portal_history") / f"{user_id}.chat.jsonl"
+        if not history_path.exists():
+            return ""
+
+        lines = history_path.read_text(encoding="utf-8").splitlines()
+        if not lines:
+            return ""
+
+        # 🔹 최근 limit개만 사용 (헛소리/감탄사 섞여도 길이로 밀어붙이기)
+        recent = lines[-limit:]
+
+        blocks: list[str] = []
+        for line in recent:
+            try:
+                obj = json.loads(line)
+            except Exception:
+                continue
+
+            role = (obj.get("role") or obj.get("speaker") or "user").strip()
+            content = (obj.get("content") or obj.get("text") or "").strip()
+            if not content:
+                continue
+
+            prefix = "assistant" if role == "assistant" else "user"
+            blocks.append(f"{prefix}: {content}")
+
+        if not blocks:
+            return ""
+
+        return "[Recent dialogue]\n" + "\n".join(blocks)
+
+    except Exception:
+        logger.exception("최근 대화 불러오는 중 에러 (무시하고 진행)")
+        return ""
+
 def analyze_text_with_llm(req: AnalyzeRequest) -> AnalyzeResponse:
     """
     mode == chat 인 경우 사용하는 텍스트 분석 함수.
@@ -241,6 +287,8 @@ def analyze_text_with_llm(req: AnalyzeRequest) -> AnalyzeResponse:
     # 1) LLM 사용 가능하면 Gemini 호출 (에러 나면 규칙 기반 fallback으로 자동 전환)
     if is_llm_available():
         user_id = getattr(req, "user_id", "default_user")
+
+        # 🔹 최근 장기 기억 불러오기
         try:
             recent_memories = load_recent_memories(user_id)
         except Exception:
@@ -250,7 +298,6 @@ def analyze_text_with_llm(req: AnalyzeRequest) -> AnalyzeResponse:
         # 🔹 불탄 chatGPT 방에서 가져온 오래된 기억들도 같이 섞어 준다.
         try:
             imported_memories = load_imported_memories(limit=30)
-            # 혹시 나중에 구분하고 싶으면 type/tags에 표시
             for m in imported_memories:
                 m.setdefault("tags", [])
                 if "burned_room" not in m["tags"]:
@@ -276,7 +323,12 @@ def analyze_text_with_llm(req: AnalyzeRequest) -> AnalyzeResponse:
 
             user_prompt = f"사용자의 말:\n{text}"
 
-            combined_parts = []
+            # 🔹 최근 대화 블록 붙이기 (왕복 20번 = 40턴)
+            recent_dialogue_block = load_recent_dialogue(user_id, limit=40)
+
+            combined_parts: list[str] = []
+            if recent_dialogue_block:
+                combined_parts.append(recent_dialogue_block)
             if memories_block:
                 combined_parts.append("[Recent memories]")
                 combined_parts.append(memories_block)
@@ -319,17 +371,19 @@ def analyze_text_with_llm(req: AnalyzeRequest) -> AnalyzeResponse:
                         "suggested_plan": None,
                         "priority": "normal",
                     },
+                    "memory_events": [],
+                    "config_updates": [],
                 }
 
-            # 🔹 config_updates 처리 (지금은 로그만 남기고 실제 변경은 안 함)
+            # 🔹 config_updates 처리
             config_updates = obj.get("config_updates") or []
             try:
                 apply_config_updates(config_updates)
             except Exception:
                 logger.exception("config_updates 처리 중 에러 발생 (무시하고 계속 진행)")
 
-            # memory_events가 비어 있으면, 기본 관찰 메모리를 하나 만들어서 저장 (디버깅/초기 테스트용)
-            memory_events = obj.get("memory_events")
+            # 🔹 memory_events 처리
+            memory_events = obj.get("memory_events") or []
             if not memory_events:
                 memory_events = [
                     {
@@ -388,7 +442,7 @@ def analyze_text_with_llm(req: AnalyzeRequest) -> AnalyzeResponse:
 
     # 2) LLM 불가일 때 간단한 규칙 기반 fallback
     lowered = text.lower()
-    intent: IntentLiteral = "unknown"
+    intent: IntentLiteral
     if any(k in lowered for k in ["영상", "비디오", "씬", "장면", "shot"]):
         intent = "veo_prompt"
     elif any(k in lowered for k in ["해야", "할 일", "todo", "기억해줘"]):
