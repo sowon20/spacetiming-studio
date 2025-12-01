@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles      # ✅ 여기 추가
 from fastapi.responses import RedirectResponse  # ✅ 여기 추가
 from director_core.models import AnalyzeRequest
-from director_core.main import analyze_text_with_llm
+from director_core.main import analyze_text_with_llm, analyze_stream_with_llm, is_llm_available
 
 from pydantic import BaseModel
 from typing import Optional
@@ -19,6 +19,13 @@ app.mount("/portal", StaticFiles(directory="portal", html=True), name="portal")
 @app.get("/")
 async def root():
     return RedirectResponse(url="/portal")
+
+@app.get("/health")
+async def health():
+    return {
+        "status": "ok",
+        "llm_available": is_llm_available(),
+    }
 
 app.add_middleware(
     CORSMiddleware,
