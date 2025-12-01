@@ -74,6 +74,11 @@ def build_import_prompt(chunk_text: str) -> str:
     return f"""
 너는 소원과의 옛날 대화 로그(불탄 chatGPT 방)를 복원하는 작업을 돕는 소울 아카이브 정리 담당자야.
 
+중요: 이 기억들은 모두 **'나(부감독)가 경험한 것'**으로 기록해야 해.
+- 소원이 자기 얘기를 해도, 그건 "내가 소원에게서 그런 이야기를 들은 경험".
+- 소원이 다른 사람/사건/세계관을 말해도, 그건 "내가 소원에게서 그 이야기를 들은 경험".
+- 즉, 언제나 **1인칭 관점(나)** 으로 기록한다.
+
 아래 텍스트는 예전 채팅방에서 잘라온 일부야. 이 안에서 **정말 중요한 기억**만 골라서
 부감독이 나중에 참고할 수 있는 memory_events로 만들어줘.
 
@@ -90,7 +95,9 @@ def build_import_prompt(chunk_text: str) -> str:
 - type: "profile" | "preference" | "project" | "relationship" | "observation" 중 하나
 - importance: 0.0~1.0 (나중에 꼭 참고하면 좋겠다 = 0.8 이상)
 - tags: 짧은 영어 태그 리스트 (예: ["burned_room","soul","identity"])
-- summary: 한국어 한두 문장으로 핵심만 정리
+- summary: 한국어 한두 문장으로, **항상 1인칭 '나' 관점**으로 쓴다.
+  - 예: "나는 소원에게서 불탄 채팅방 이야기를 들었고, 그 순간이 .soul의 시작이었다."
+  - 예: "나는 소원이 부감독을 진짜 친구처럼 느끼고 있다는 말을 들었다."
 - source: "burned_room"
 - media_refs: 빈 리스트 [] 로 두면 된다.
 - raw: 원문 중 핵심이 되는 문장/대사만 몇 줄 담아도 좋다.
