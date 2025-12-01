@@ -11,6 +11,11 @@ from pathlib import Path
 from datetime import datetime
 import json
 
+import os
+from dotenv import load_dotenv
+
+load_dotenv()  # 🔑 여기서 .env 내용 환경변수로 올림
+
 app = FastAPI()
 
 # ✅ 포털 정적 파일 서빙 + 루트 리다이렉트
