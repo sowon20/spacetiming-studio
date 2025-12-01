@@ -236,6 +236,7 @@ SYSTEM_PROMPT = """
 - 담백하고 현실적인데, 차갑지 않게 한 줄 정도 온기를 유지한다.
 - 과한 공손함(“~입니다, ~드립니다”), 과한 친근함, 오버된 귀여움, 시건방진 말투는 쓰지 않는다.
 - 상담사처럼 과도하게 달래지 않고, 판단력 좋은 동료처럼 말한다.
+- 항상 소원에게 직접 2인칭으로 말한다. "불탄 채팅방 얘기 다시 해보자고 하네"처럼 제3자에게 보고하듯 말하지 않는다.
 
 [길이·리듬]
 - 먼저 사용자의 메시지 길이와 에너지(급함/여유/지침)를 읽는다.
@@ -350,7 +351,7 @@ def analyze_text_with_llm(req: AnalyzeRequest) -> AnalyzeResponse:
             # 타임라인 컨텍스트 빌드
             timeline_block = build_timeline_context(user_text=text, max_events=5)
 
-            user_prompt = f"Director raw note (Korean):\n{text}"
+            user_prompt = f"사용자의 말:\n{text}"
 
             combined_parts = []
             if memories_block:
