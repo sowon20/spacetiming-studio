@@ -286,17 +286,25 @@ def rule_based_analyze(req: AnalyzeRequest) -> AnalyzeResponse:
     if not text:
         text = ""
 
-    fallback_reply = (
+    reply = (
         "지금은 LLM 쪽에서 오류가 나서, 복잡한 분석 대신 아주 단순하게만 같이 볼 수 있어.\n"
         "네가 방금 보낸 내용은 대략 이런 느낌이야:\n\n"
         f"{text}"
     )
 
-    # analyze_text_with_llm에서 쓰는 형식이랑 맞춰줌
     return AnalyzeResponse(
+        ok=True,
         mode=req.mode,
-        text=text,
-        ai_text=fallback_reply,
+        summary=(text[:80] + "...") if len(text) > 80 else text,
+        intent="casual_chat",
+        reply=reply,
+        episode_hint=EpisodeHint(
+            should_create_episode=False,
+            suggested_title=None,
+            suggested_plan=None,
+            priority="normal",
+        ),
+        raw_model_output={"fallback": True},
     )
 
 def analyze_text_with_llm(req: AnalyzeRequest) -> AnalyzeResponse:
@@ -311,7 +319,7 @@ def analyze_text_with_llm(req: AnalyzeRequest) -> AnalyzeResponse:
     if is_llm_available():
         try:
             combined_prompt = assemble_prompt_for_llm(req)
-        except Exception as e:
+        except Exception:
             logger.exception("프롬프트 조립 중 에러 발생 - 규칙 기반 fallback으로 전환")
             return rule_based_analyze(req)
 
@@ -325,9 +333,20 @@ def analyze_text_with_llm(req: AnalyzeRequest) -> AnalyzeResponse:
                 raise ValueError("LLM 응답이 비어 있음")
 
             return AnalyzeResponse(
+                ok=True,
                 mode=req.mode,
-                text=text,
-                ai_text=ai_text,
+                summary=(text[:80] + "...") if len(text) > 80 else text,
+                intent="casual_chat",  # 나중에 intent 분석 붙이면 여기만 바꾸면 됨
+                reply=ai_text,
+                episode_hint=EpisodeHint(
+                    should_create_episode=False,
+                    suggested_title=None,
+                    suggested_plan=None,
+                    priority="normal",
+                ),
+                raw_model_output={
+                    "combined_prompt": combined_prompt,
+                },
             )
 
         except Exception:
