@@ -40,7 +40,12 @@
       "type": "shell",
       "command": "cd \"$HOME/시공간 스튜디오/spacetiming-studio\" && source .venv310/bin/activate && python scripts/list_live_models.py",
       "problemMatcher": []
+    },
+    {
+      "label": "⑥ 라즈베리로 푸시 + 동기화",
+      "type": "shell",
+      "command": "cd \"$HOME/시공간 스튜디오/spacetiming-studio\" && git push && ssh sowon@192.168.0.50 'cd ~/spacetiming-studio && git pull && sudo systemctl restart spacetiming-portal.service'",
+      "problemMatcher": []
     }
-    
   ]
 }

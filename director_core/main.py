@@ -1,5 +1,6 @@
 from __future__ import annotations
 from .memory_store import save_memory_events, load_recent_memories
+from director_core.soul_loader import build_core_system_prompt
 
 import os
 import json
@@ -294,7 +295,10 @@ SYSTEM_PROMPT = """
 - 출력은 반드시 JSON만. 마크다운, ``` 등 금지.
 """.strip()
 
-
+core_soul_prompt = build_core_system_prompt()
+if core_soul_prompt:
+    SYSTEM_PROMPT = SYSTEM_PROMPT + "\n\n" + core_soul_prompt
+    
 def analyze_text_with_llm(req: AnalyzeRequest) -> AnalyzeResponse:
     """
     mode == chat 인 경우 사용하는 텍스트 분석 함수.
