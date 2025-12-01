@@ -313,6 +313,9 @@ SYSTEM_PROMPT = """
       - field: "nickname" 등 필드 이름
       - value: 제안하는 새 값
       - reason: 왜 바꾸고 싶은지 한두 문장 설명
+- 이런 말이 나올 때 config_updates를 고려한다:
+  - "앞으로 ~는 네가 알아서 해 줘."
+  - "~ 하기 전에 나한테 먼저 말해줘."      
 """.strip()
 
 core_soul_prompt = build_core_system_prompt()
