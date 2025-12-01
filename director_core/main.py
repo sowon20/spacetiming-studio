@@ -6,6 +6,7 @@ from .soul_loader import (
     build_timeline_context,
 )
 from .prompt_loader import load_base_system_prompt
+from .prompt_assembler import assemble_prompt_for_llm
 
 import os
 import json
@@ -276,6 +277,28 @@ def load_recent_dialogue(user_id: str, limit: int = 40) -> str:
         logger.exception("최근 대화 불러오는 중 에러 (무시하고 진행)")
         return ""
 
+def rule_based_analyze(req: AnalyzeRequest) -> AnalyzeResponse:
+    """
+    LLM이 없거나 에러 날 때 쓰는 아주 단순한 fallback.
+    지금은 그냥 원래 텍스트를 되비춰주는 정도로만 동작하게 둔다.
+    """
+    text = (req.text or "").strip()
+    if not text:
+        text = ""
+
+    fallback_reply = (
+        "지금은 LLM 쪽에서 오류가 나서, 복잡한 분석 대신 아주 단순하게만 같이 볼 수 있어.\n"
+        "네가 방금 보낸 내용은 대략 이런 느낌이야:\n\n"
+        f"{text}"
+    )
+
+    # analyze_text_with_llm에서 쓰는 형식이랑 맞춰줌
+    return AnalyzeResponse(
+        mode=req.mode,
+        text=text,
+        ai_text=fallback_reply,
+    )
+
 def analyze_text_with_llm(req: AnalyzeRequest) -> AnalyzeResponse:
     """
     mode == chat 인 경우 사용하는 텍스트 분석 함수.
@@ -286,194 +309,33 @@ def analyze_text_with_llm(req: AnalyzeRequest) -> AnalyzeResponse:
 
     # 1) LLM 사용 가능하면 Gemini 호출 (에러 나면 규칙 기반 fallback으로 자동 전환)
     if is_llm_available():
-        user_id = getattr(req, "user_id", "default_user")
-
-        # 🔹 최근 장기 기억 불러오기
         try:
-            recent_memories = load_recent_memories(user_id)
-        except Exception:
-            logger.exception("최근 기억 불러오는 중 에러 발생 (무시하고 계속 진행)")
-            recent_memories = []
-
-        # 🔹 불탄 chatGPT 방에서 가져온 오래된 기억들도 같이 섞어 준다.
-        try:
-            imported_memories = load_imported_memories(limit=30)
-            for m in imported_memories:
-                m.setdefault("tags", [])
-                if "burned_room" not in m["tags"]:
-                    m["tags"].append("burned_room")
-            recent_memories.extend(imported_memories)
-        except Exception:
-            logger.exception("불탄방 imported memories 합치는 중 에러 발생 (무시하고 계속 진행)")
+            combined_prompt = assemble_prompt_for_llm(req)
+        except Exception as e:
+            logger.exception("프롬프트 조립 중 에러 발생 - 규칙 기반 fallback으로 전환")
+            return rule_based_analyze(req)
 
         try:
             model = get_gemini_model()
-
-            # recent_memories를 사람이 보기 좋게 문자열로 풀어줌
-            memories_block = ""
-            if recent_memories:
-                lines = [
-                    f"- ({m.get('type')}) {m.get('summary')}"
-                    for m in recent_memories
-                ]
-                memories_block = "Recent long-term memories:\n" + "\n".join(lines)
-
-            # 타임라인 컨텍스트 빌드
-            timeline_block = build_timeline_context(user_text=text, max_events=5)
-
-            user_prompt = f"사용자의 말:\n{text}"
-
-            # 🔹 최근 대화 블록 붙이기 (왕복 20번 = 40턴)
-            recent_dialogue_block = load_recent_dialogue(user_id, limit=40)
-
-            combined_parts: list[str] = []
-            if recent_dialogue_block:
-                combined_parts.append(recent_dialogue_block)
-            if memories_block:
-                combined_parts.append("[Recent memories]")
-                combined_parts.append(memories_block)
-            if timeline_block:
-                combined_parts.append("[Timeline context]")
-                combined_parts.append(timeline_block)
-            combined_parts.append("[Director message]")
-            combined_parts.append(user_prompt)
-
-            combined_prompt = "\n\n".join(combined_parts)
-
             chat_session = model.start_chat()
             chat = chat_session.send_message(combined_prompt)
 
-            raw_text = chat.text or ""
-            raw = {"text": raw_text}
-
-            # JSON 파싱 시도
-            try:
-                match = re.search(r"```json(.*?)```", raw_text, re.DOTALL)
-                if match:
-                    json_str = match.group(1)
-                else:
-                    json_str = raw_text
-                obj = json.loads(json_str)
-            except Exception:
-                # JSON 파싱에 실패하면, LLM이 돌려준 자연어 답변 자체를 사용한다.
-                logger.exception("LLM JSON 파싱 실패, raw_text를 그대로 사용")
-                cleaned = (raw_text or "").strip()
-                if not cleaned:
-                    cleaned = "응, 잘 들었어. 더 이야기해줘. 😊"
-
-                obj = {
-                    "summary": text[:60],
-                    "intent": "unknown",
-                    "reply": cleaned,
-                    "episode_hint": {
-                        "should_create_episode": False,
-                        "suggested_title": None,
-                        "suggested_plan": None,
-                        "priority": "normal",
-                    },
-                    "memory_events": [],
-                    "config_updates": [],
-                }
-
-            # 🔹 config_updates 처리
-            config_updates = obj.get("config_updates") or []
-            try:
-                apply_config_updates(config_updates)
-            except Exception:
-                logger.exception("config_updates 처리 중 에러 발생 (무시하고 계속 진행)")
-
-            # 🔹 memory_events 처리
-            memory_events = obj.get("memory_events") or []
-            if not memory_events:
-                memory_events = [
-                    {
-                        "type": "observation",
-                        "importance": 0.6,
-                        "tags": ["chat"],
-                        "summary": text[:60],
-                        "source": "telegram",
-                        "media_refs": [],
-                        "raw": {"text": text},
-                    }
-                ]
-            try:
-                save_memory_events(user_id, memory_events)
-            except Exception:
-                logger.exception("memory_events 저장 중 에러 발생 (무시하고 계속 진행)")
-
-            summary = obj.get("summary", text[:60])
-            intent = obj.get("intent", "unknown")
-            reply = obj.get("reply", "응, 잘 들었어. 더 이야기해줘. 😊")
-
-            eh = obj.get("episode_hint") or {}
-            episode_hint = EpisodeHint(
-                should_create_episode=bool(eh.get("should_create_episode", False)),
-                suggested_title=eh.get("suggested_title"),
-                suggested_plan=eh.get("suggested_plan"),
-                priority=eh.get("priority") or "normal",
-            )
-
-            safe_intent: IntentLiteral
-            if intent in [
-                "veo_prompt",
-                "casual_chat",
-                "daily_log",
-                "todo",
-                "question",
-                "unknown",
-            ]:
-                safe_intent = intent  # type: ignore
-            else:
-                safe_intent = "unknown"
+            ai_text = (chat.text or "").strip()
+            if not ai_text:
+                raise ValueError("LLM 응답이 비어 있음")
 
             return AnalyzeResponse(
-                ok=True,
                 mode=req.mode,
-                summary=summary,
-                intent=safe_intent,
-                reply=reply,
-                episode_hint=episode_hint,
-                raw_model_output=raw,
+                text=text,
+                ai_text=ai_text,
             )
+
         except Exception:
-            # LLM 쪽에서 에러가 나면 규칙 기반 fallback으로 넘긴다.
-            logger.exception("LLM 분석 중 에러 발생, 규칙 기반 fallback 사용")
-            # 아래의 규칙 기반 fallback 로직으로 내려가도록 한다.
+            logger.exception("LLM 호출 중 에러 발생 - 규칙 기반 fallback으로 전환")
+            return rule_based_analyze(req)
 
-    # 2) LLM 불가일 때 간단한 규칙 기반 fallback
-    lowered = text.lower()
-    intent: IntentLiteral
-    if any(k in lowered for k in ["영상", "비디오", "씬", "장면", "shot"]):
-        intent = "veo_prompt"
-    elif any(k in lowered for k in ["해야", "할 일", "todo", "기억해줘"]):
-        intent = "todo"
-    elif any(k in lowered for k in ["왜", "어떻게", "?", "궁금"]):
-        intent = "question"
-    else:
-        intent = "casual_chat"
-
-    summary = text[:60]
-    reply = (
-        "지금은 내 머리(LLM)가 잠깐 끊겨서 깊게 같이 생각하진 못해. "
-        "그래도 네 말은 그대로 기록해둘게. 나중에 다시 연결되면 그때 제대로 같이 보자."
-    )
-
-    episode_hint = EpisodeHint(
-        should_create_episode=(intent == "veo_prompt"),
-        suggested_title=None,
-        suggested_plan=None,
-        priority="normal",
-    )
-
-    return AnalyzeResponse(
-        ok=True,
-        mode=req.mode,
-        summary=summary,
-        intent=intent,
-        reply=reply,
-        episode_hint=episode_hint,
-        raw_model_output={},
-    )
+    # 2) LLM 사용 불가 시, 규칙 기반 분석만 사용
+    return rule_based_analyze(req)
 
 
 # ─────────────────────────────────────
