@@ -22,4 +22,4 @@ veo_agent/keys/
 # Akashic raw logs / 개인 히스토리
 akashic/raw/
 akashic/imports/
-portal_history/
+service-account.json

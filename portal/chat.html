@@ -68,10 +68,14 @@
       box-shadow:
         0 18px 40px rgba(15, 23, 42, 0.9),
         inset 0 -1px 0 rgba(148, 163, 184, 0.18);
-      position: sticky;
-      top: 0;
-      z-index: 30;
-    }
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 900px;
+  z-index: 30;
+}
 
     .dash-top-row {
       display: flex;
@@ -584,10 +588,10 @@
         max-height: none;
         border-radius: 0;
       }
-      textarea.input {
-        font-size: 16px;
-      }
-    }
+  .chat-shell {
+    padding-top: 88px; /* 상단 어두운 박스 높이만큼 내려줌 */
+  }
+}
   </style>
 </head>
 <body>
