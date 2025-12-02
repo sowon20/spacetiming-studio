@@ -1,511 +1,301 @@
-// app.js
-// Spacetime Portal – 프론트만 있는 초기 버전
-// (백엔드는 나중에 Gemini/텔레그램/자동화 서버랑 연결) 
+// 간단한 상태
+let messages = [];
+let nextId = 1;
+let pinnedId = null;
+let attachments = [];
 
-const PortalApp = (() => {
-  const state = {
-    mode: "text", // 'text' | 'voice' | 'call' | 'multi'
-    activeView: "portal",
-  };
+const chatListEl = document.getElementById("chat-list");
+const inputEl = document.getElementById("composer-input");
+const sendBtn = document.getElementById("send-btn");
+const attachBtn = document.getElementById("attach-btn");
+const fileInput = document.getElementById("file-input");
+const attachmentsStrip = document.getElementById("attachments-strip");
+const pinnedBar = document.getElementById("pinned-bar");
+const pinnedSummaryEl = document.getElementById("pinned-summary");
+const pinnedClearBtn = document.getElementById("pinned-clear");
+const pinnedContentBtn = document.getElementById("pinned-content-btn");
+const pinModalBackdrop = document.getElementById("pin-modal-backdrop");
+const pinModalBody = document.getElementById("pin-modal-body");
+const pinModalMeta = document.getElementById("pin-modal-meta");
+const pinModalClose = document.getElementById("pin-modal-close");
+const heroMeta = document.getElementById("hero-meta");
 
-  // DOM 캐시
-  const els = {};
+function nowTimeString() {
+  const d = new Date();
+  const h = d.getHours();
+  const m = String(d.getMinutes()).padStart(2, "0");
+  const ampm = h < 12 ? "오전" : "오후";
+  const hour12 = h % 12 || 12;
+  return `${ampm} ${hour12}:${m}`;
+}
 
-  function cacheElements() {
-    els.root = document.getElementById("portal-root");
-    els.clock = document.getElementById("portal-clock");
-    els.modeSwitch = document.getElementById("portal-mode-switch");
-    els.modeButtons = els.modeSwitch
-      ? Array.from(els.modeSwitch.querySelectorAll("[data-mode]"))
-      : [];
-    els.modeHint = document.getElementById("portal-mode-hint");
+function renderMessages() {
+  chatListEl.innerHTML = "";
+  messages.forEach((msg) => {
+    const li = document.createElement("article");
+    li.className = `message ${msg.role}` + (msg.id === pinnedId ? " pinned" : "");
+    li.dataset.id = msg.id;
 
-    els.navItems = Array.from(
-      document.querySelectorAll(".nav-item[data-view]")
-    );
-    els.viewSections = Array.from(
-      document.querySelectorAll("[data-view-section]")
-    );
+    const header = document.createElement("div");
+    header.className = "msg-header";
 
-    els.contextTabs = document.getElementById("context-tabs");
-    els.contextTabButtons = els.contextTabs
-      ? Array.from(els.contextTabs.querySelectorAll("[data-tab]"))
-      : [];
-    els.contextTabSections = Array.from(
-      document.querySelectorAll("[data-tab-content]")
-    );
+    const author = document.createElement("span");
+    author.className = "msg-author";
+    author.textContent = msg.role === "user" ? "소원" : "부감독";
 
-    els.conversationLog = document.getElementById("conversation-log");
-    els.form = document.getElementById("portal-input-form");
-    els.input = document.getElementById("portal-input");
-    els.voiceToggleBtn = document.getElementById("voice-toggle-btn");
-    els.sessionStatusText = document.getElementById("session-status-text");
+    const actions = document.createElement("div");
+    actions.className = "msg-actions";
 
-    // AI Assistant (오른쪽 글라스 카드) 채팅 요소들
-    els.assistantChatContainer = document.getElementById("chat-container");
-    els.assistantInput = document.getElementById("chat-input");
-    els.assistantSendBtn = document.getElementById("chat-send");
-    els.assistantImageBtn = document.getElementById("chat-image-btn");
-    els.assistantImageInput = document.getElementById("chat-image-input");
-  }
+    const btnPin = document.createElement("button");
+    btnPin.textContent = "📌";
+    btnPin.title = "이 메시지 핀 고정";
+    btnPin.dataset.action = "pin";
+    btnPin.dataset.id = msg.id;
 
-  /* 시계 */
-  function startClock() {
-    if (!els.clock) return;
-    const formatter = new Intl.DateTimeFormat("ko-KR", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-      weekday: "short",
-    });
+    const btnRestart = document.createElement("button");
+    btnRestart.textContent = "↺";
+    btnRestart.title = "이 순간부터 다시 시작";
+    btnRestart.dataset.action = "restart";
+    btnRestart.dataset.id = msg.id;
 
-    const tick = () => {
-      const now = new Date();
-      const formatted = formatter.format(now);
-      els.clock.textContent = formatted;
-    };
+    const btnEdit = document.createElement("button");
+    btnEdit.textContent = "✎";
+    btnEdit.title = "수정";
+    btnEdit.dataset.action = "edit";
+    btnEdit.dataset.id = msg.id;
 
-    tick();
-    setInterval(tick, 1000 * 30);
-  }
+    const btnDelete = document.createElement("button");
+    btnDelete.textContent = "🗑";
+    btnDelete.title = "삭제";
+    btnDelete.dataset.action = "delete";
+    btnDelete.dataset.id = msg.id;
 
-  /* 모드 전환 */
-  function bindModeSwitch() {
-    if (!els.modeSwitch) return;
-
-    els.modeButtons.forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const mode = btn.dataset.mode;
-        setMode(mode);
-      });
-    });
-  }
-
-  function setMode(mode) {
-    state.mode = mode;
-
-    // UI 업데이트
-    els.modeButtons.forEach((btn) => {
-      const isActive = btn.dataset.mode === mode;
-      btn.classList.toggle("mode-btn--active", isActive);
-    });
-
-    if (els.modeHint) {
-      const labelMap = {
-        text: "텍스트",
-        voice: "음성",
-        call: "통화",
-        multi: "멀티모달",
-      };
-      const label = labelMap[mode] ?? mode;
-      els.modeHint.textContent = `현재 모드: ${label} · 이후 Gemini Live / 음성 / 통화와 연결 예정`;
-    }
-
-    if (els.sessionStatusText) {
-      els.sessionStatusText.textContent = `모드: ${
-        mode === "multi" ? "올인원" : mode
-      } · 1인 전용 세션 · 프론트 UI 레벨`;
-    }
-  }
-
-  /* 내비게이션 뷰 전환 */
-  function bindNavigation() {
-    els.navItems.forEach((item) => {
-      item.addEventListener("click", () => {
-        const view = item.dataset.view;
-        setView(view);
-      });
-    });
-
-    const settingsBtn = document.querySelector(
-      ".nav-settings-btn[data-view='settings']"
-    );
-    if (settingsBtn) {
-      settingsBtn.addEventListener("click", () => setView("settings"));
-    }
-  }
-
-  function setView(view) {
-    state.activeView = view;
-
-    // 내비 버튼 상태
-    els.navItems.forEach((item) => {
-      item.classList.toggle(
-        "nav-item--active",
-        item.dataset.view === view
-      );
-    });
-
-    // 섹션 표시
-    els.viewSections.forEach((section) => {
-      const id = section.id || "";
-      const isActive = id === `portal-view-${view}`;
-      if (section.classList.contains("portal-grid")) {
-        section.style.display = isActive ? "grid" : "none";
-      } else {
-        section.style.display = isActive ? "block" : "none";
-      }
-    });
-  }
-
-  /* 컨텍스트 탭 전환 */
-  function bindContextTabs() {
-    if (!els.contextTabs) return;
-
-    els.contextTabButtons.forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const tab = btn.dataset.tab;
-        setContextTab(tab);
-      });
-    });
-  }
-
-  function setContextTab(tab) {
-    els.contextTabButtons.forEach((btn) => {
-      btn.classList.toggle(
-        "side-tab--active",
-        btn.dataset.tab === tab
-      );
-    });
-
-    els.contextTabSections.forEach((section) => {
-      const isActive = section.dataset.tabContent === tab;
-      section.classList.toggle("side-section--hidden", !isActive);
-    });
-  }
-
-  /* 대화 입력 처리 (테스트용) */
-  function bindConversation() {
-    if (!els.form) return;
-
-    els.form.addEventListener("submit", (event) => {
-      event.preventDefault();
-      const text = (els.input.value || "").trim();
-      if (!text) return;
-
-      appendMessage({
-        role: "user",
-        text,
-      });
-
-      els.input.value = "";
-      autosizeTextarea();
-
-      // 여기서 이후 백엔드 연결 시:
-      // - 텍스트 모드: API 호출
-      // - 음성/통화 모드: 별도 핸들러
-      // 지금은 프론트 테스트용 더미 응답만.
-      appendMessage({
-        role: "system",
-        text: `지금은 포털 UI 테스트 모드야.\n나중엔 이 자리에 Gemini/부감독 라이브 응답이 들어올 거야.\n\n입력: “${text}”`,
-      });
-    });
-
-    els.input.addEventListener("input", () => {
-      autosizeTextarea();
-    });
-  }
-
-  function appendMessage({ role, text }) {
-    if (!els.conversationLog) return;
-
-    const row = document.createElement("div");
-    row.className = `message-row ${
-      role === "user" ? "message-row--user" : "message-row--system"
-    }`;
+    actions.append(btnPin, btnRestart, btnEdit, btnDelete);
+    header.append(author, actions);
 
     const bubble = document.createElement("div");
-    bubble.className = "message-bubble";
+    bubble.className = "bubble";
+    bubble.textContent = msg.content;
 
     const meta = document.createElement("div");
-    meta.className = "message-meta";
+    meta.className = "msg-meta";
+    meta.textContent = msg.time || "";
 
-    const roleSpan = document.createElement("span");
-    roleSpan.className = "message-role";
-    roleSpan.textContent = role === "user" ? "소원" : "부감독";
+    li.append(header, bubble, meta);
+    chatListEl.appendChild(li);
+  });
 
-    const timeSpan = document.createElement("span");
-    timeSpan.className = "message-time";
-    timeSpan.textContent = "지금";
+  chatListEl.scrollTop = chatListEl.scrollHeight;
+}
 
-    meta.appendChild(roleSpan);
-    meta.appendChild(timeSpan);
-
-    const textP = document.createElement("p");
-    textP.className = "message-text";
-    textP.textContent = text;
-
-    bubble.appendChild(meta);
-    bubble.appendChild(textP);
-    row.appendChild(bubble);
-
-    els.conversationLog.appendChild(row);
-    els.conversationLog.scrollTop = els.conversationLog.scrollHeight;
+function refreshPinnedBar() {
+  if (!pinnedId) {
+    pinnedBar.hidden = true;
+    return;
   }
-
-  function autosizeTextarea() {
-    if (!els.input) return;
-    els.input.style.height = "auto";
-    const maxHeight = 120;
-    const newHeight = Math.min(els.input.scrollHeight, maxHeight);
-    els.input.style.height = `${newHeight}px`;
+  const msg = messages.find((m) => m.id === pinnedId);
+  if (!msg) {
+    pinnedId = null;
+    pinnedBar.hidden = true;
+    return;
   }
+  pinnedBar.hidden = false;
+  const summary =
+    msg.content.length > 60 ? msg.content.slice(0, 60) + "…" : msg.content;
+  pinnedSummaryEl.textContent = summary;
+}
 
-  /* 음성 토글 (UI 상태만) */
-  function bindVoiceToggle() {
-    if (!els.voiceToggleBtn) return;
-
-    els.voiceToggleBtn.addEventListener("click", () => {
-      const active = els.voiceToggleBtn.classList.toggle("icon-btn--active");
-      // 실제 마이크 제어는 나중에
-      const label = active ? "음성 대기 중" : "음성 비활성화";
-      els.voiceToggleBtn.title = label;
-    });
-  }
-
-  /* Director 서버 헬스 체크 (세션 상태 표시) */
-  function startHealthCheck() {
-    const el = els.sessionStatusText;
-    if (!el) return;
-
-    async function update() {
-      try {
-        const res = await fetch("http://localhost:8000/health");
-        if (!res.ok) throw new Error("bad status");
-
-        // Online
-        el.textContent = "Director · Online · 로컬 서버 연결됨";
-        el.classList.add("status-online");
-        el.classList.remove("status-offline");
-      } catch (err) {
-        console.error("[Portal] health check failed:", err);
-        // Offline
-        el.textContent = "Director · Offline · 서버 꺼져 있거나 연결 안 됨";
-        el.classList.add("status-offline");
-        el.classList.remove("status-online");
-      }
-    }
-
-    update();                  // 첫 실행
-    setInterval(update, 10000); // 10초 주기 체크
-  }
-
-  /* AI Assistant 채팅: Director 서버와 연결 */
-  function scrollAssistantChatToBottom() {
-    if (!els.assistantChatContainer) return;
-    els.assistantChatContainer.scrollTop = els.assistantChatContainer.scrollHeight;
-  }
-
-  function addAssistantTextBubble(role, text) {
-    if (!els.assistantChatContainer) return;
-    const row = document.createElement("div");
-    row.classList.add("chat-row", role === "me" ? "me" : "ai");
-
-    const author = document.createElement("div");
-    author.classList.add("chat-author-inline", role === "me" ? "me" : "ai");
-    author.textContent = role === "me" ? "Sowon" : "Director";
-
-    const bubble = document.createElement("div");
-    bubble.classList.add("chat-bubble", role === "me" ? "me" : "ai");
-    bubble.textContent = text;
-
-    const metaLine = document.createElement("div");
-    metaLine.classList.add("chat-meta-line", role === "me" ? "me" : "ai");
-
-    const meta = document.createElement("span");
-    meta.classList.add("chat-meta");
-    const now = new Date();
-    const hh = String(now.getHours()).padStart(2, "0");
-    const mm = String(now.getMinutes()).padStart(2, "0");
-    meta.textContent = `오늘 · ${hh}:${mm}`;
-
-    metaLine.appendChild(meta);
-
-    row.appendChild(author);
-    row.appendChild(bubble);
-    row.appendChild(metaLine);
-
-    els.assistantChatContainer.appendChild(row);
-    scrollAssistantChatToBottom();
-  }
-
-  function addAssistantImageBubble(role, imageUrl) {
-    if (!els.assistantChatContainer) return;
-    const row = document.createElement("div");
-    row.classList.add("chat-row", role === "me" ? "me" : "ai");
-
-    const author = document.createElement("div");
-    author.classList.add("chat-author-inline", role === "me" ? "me" : "ai");
-    author.textContent = role === "me" ? "Sowon" : "Director";
-
-    const bubble = document.createElement("div");
-    bubble.classList.add("chat-bubble", role === "me" ? "me" : "ai");
-
-    const media = document.createElement("div");
-    media.classList.add("media-attachment");
-    const img = document.createElement("img");
-    img.src = imageUrl;
-    img.alt = "첨부 이미지";
-    media.appendChild(img);
-
-    bubble.appendChild(media);
-
-    const metaLine = document.createElement("div");
-    metaLine.classList.add("chat-meta-line", role === "me" ? "me" : "ai");
-
-    const meta = document.createElement("span");
-    meta.classList.add("chat-meta");
-    const now = new Date();
-    const hh = String(now.getHours()).padStart(2, "0");
-    const mm = String(now.getMinutes()).padStart(2, "0");
-    meta.textContent = `오늘 · ${hh}:${mm}`;
-
-    metaLine.appendChild(meta);
-
-    row.appendChild(author);
-    row.appendChild(bubble);
-    row.appendChild(metaLine);
-
-    els.assistantChatContainer.appendChild(row);
-    scrollAssistantChatToBottom();
-  }
-
-  async function sendTextToDirector(text) {
-    console.log("[Portal] Sending text to director:", text);
-    try {
-      const res = await fetch("http://localhost:8000/director/analyze", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          mode: "chat",
-          text,
-          user_id: "sowon",
-        }),
-      });
-
-      console.log("[Portal] Director text response status:", res.status);
-
-      if (!res.ok) {
-        return "부감독 서버에서 에러 응답이 온 것 같아. 터미널 로그를 한번 확인해줘.";
-      }
-
-      const data = await res.json();
-      console.log("[Portal] Director text response JSON:", data);
-
-      if (data && typeof data.reply === "string") {
-        return data.reply;
-      }
-      return "텍스트 응답 형식이 예상과 달라. 나중에 로그를 확인해보자.";
-    } catch (err) {
-      console.error("[Portal] Director text request failed:", err);
-      return "부감독 서버에 연결이 안 돼. 서버 주소나 상태를 확인해줘.";
-    }
-  }
-
-  async function sendImageToDirector(file) {
-    if (!file) return "전달할 이미지 파일이 없어요.";
-    console.log("[Portal] Sending image to director:", file.name);
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("user_id", "sowon");
-
-    try {
-      const res = await fetch("http://localhost:8000/director/vision", {
-        method: "POST",
-        body: formData,
-      });
-
-      console.log("[Portal] Director image response status:", res.status);
-
-      if (!res.ok) {
-        return "이미지 분석 중 서버 응답에 문제가 있어. 터미널 로그를 한번 확인해줘.";
-      }
-
-      const data = await res.json();
-      console.log("[Portal] Director image response JSON:", data);
-
-      if (data && typeof data.reply === "string") {
-        return data.reply;
-      }
-      if (data && typeof data.summary === "string") {
-        return data.summary;
-      }
-      return "이미지 분석은 끝났는데, 응답 형식이 예상과 조금 달라. 나중에 로그를 확인해보자.";
-    } catch (err) {
-      console.error("[Portal] Director image request failed:", err);
-      return "이미지 분석 서버에 연결이 안 돼. 서버 주소나 상태를 확인해줘.";
-    }
-  }
-
-  function bindAssistantChat() {
-    // 텍스트 전송
-    if (els.assistantSendBtn && els.assistantInput) {
-      const handleSend = async () => {
-        const text = (els.assistantInput.value || "").trim();
-        if (!text) return;
-        addAssistantTextBubble("me", text);
-        els.assistantInput.value = "";
-        const reply = await sendTextToDirector(text);
-        addAssistantTextBubble("ai", reply);
-      };
-
-      els.assistantSendBtn.addEventListener("click", (e) => {
-        e.preventDefault();
-        handleSend();
-      });
-
-      els.assistantInput.addEventListener("keydown", (e) => {
-        if (e.key === "Enter" && !e.isComposing) {
-          e.preventDefault();
-          handleSend();
-        }
-      });
-    }
-
-    // 이미지 전송
-    if (els.assistantImageBtn && els.assistantImageInput) {
-      els.assistantImageBtn.addEventListener("click", (e) => {
-        e.preventDefault();
-        els.assistantImageInput.click();
-      });
-
-      els.assistantImageInput.addEventListener("change", async (e) => {
-        const file = e.target.files && e.target.files[0];
-        if (!file) return;
-        const objectUrl = URL.createObjectURL(file);
-        addAssistantImageBubble("me", objectUrl);
-        const reply = await sendImageToDirector(file);
-        addAssistantTextBubble("ai", reply);
-        setTimeout(() => URL.revokeObjectURL(objectUrl), 60 * 1000);
-      });
-    }
-  }
-
-  /* 초기화 */
-  function init() {
-    cacheElements();
-    startClock();
-    bindModeSwitch();
-    bindNavigation();
-    bindContextTabs();
-    bindConversation();
-    bindVoiceToggle();
-    startHealthCheck();
-    bindAssistantChat();
-
-    // 기본 상태
-    setMode(state.mode);
-    setView(state.activeView);
-    setContextTab("now");
-    autosizeTextarea();
-  }
-
-  return {
-    init,
-    getState: () => ({ ...state }),
+function addMessage(role, content) {
+  const msg = {
+    id: nextId++,
+    role,
+    content,
+    time: nowTimeString(),
+    attachments: attachments.slice(),
   };
-})();
+  messages.push(msg);
+  heroMeta.textContent = `오늘 ${messages.length}개 메시지 기록됨`;
+  attachments = [];
+  renderAttachments();
+  renderMessages();
+}
 
-document.addEventListener("DOMContentLoaded", () => {
-  PortalApp.init();
+function renderAttachments() {
+  attachmentsStrip.innerHTML = "";
+  if (!attachments.length) {
+    attachmentsStrip.classList.remove("visible");
+    return;
+  }
+  attachmentsStrip.classList.add("visible");
+  attachments.forEach((item, idx) => {
+    const chip = document.createElement("div");
+    const isImage = !!item.previewUrl;
+    chip.className = "attachment-chip" + (isImage ? " image" : "");
+
+    if (isImage) {
+      const img = document.createElement("img");
+      img.className = "attachment-preview-img";
+      img.src = item.previewUrl;
+      chip.appendChild(img);
+    } else {
+      const name = document.createElement("span");
+      name.className = "attachment-name";
+      name.textContent = item.file.name;
+      chip.appendChild(name);
+    }
+
+    const btnRemove = document.createElement("button");
+    btnRemove.className = "attachment-remove";
+    btnRemove.textContent = "×";
+    btnRemove.dataset.index = idx;
+    chip.appendChild(btnRemove);
+
+    attachmentsStrip.appendChild(chip);
+  });
+}
+
+// 입력창 동작
+inputEl.addEventListener("input", () => {
+  inputEl.style.height = "auto";
+  inputEl.style.height = inputEl.scrollHeight + "px";
+  const hasText = inputEl.value.trim().length > 0;
+  sendBtn.classList.toggle("disabled", !hasText);
 });
+
+inputEl.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    handleSend();
+  }
+});
+
+sendBtn.addEventListener("click", () => {
+  if (sendBtn.classList.contains("disabled")) return;
+  handleSend();
+});
+
+function handleSend() {
+  const text = inputEl.value.trim();
+  if (!text) return;
+  addMessage("user", text);
+  inputEl.value = "";
+  inputEl.style.height = "auto";
+  sendBtn.classList.add("disabled");
+  // TODO: 여기서 백엔드 호출 붙이면 됨.
+}
+
+// 파일 첨부
+attachBtn.addEventListener("click", () => {
+  fileInput.click();
+});
+
+fileInput.addEventListener("change", () => {
+  const files = Array.from(fileInput.files || []);
+  files.forEach((file) => {
+    const item = { file, previewUrl: null };
+    if (file.type.startsWith("image/")) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        item.previewUrl = e.target.result;
+        renderAttachments();
+      };
+      reader.readAsDataURL(file);
+    }
+    attachments.push(item);
+  });
+  renderAttachments();
+  fileInput.value = "";
+});
+
+attachmentsStrip.addEventListener("click", (e) => {
+  const btn = e.target.closest(".attachment-remove");
+  if (!btn) return;
+  const idx = Number(btn.dataset.index);
+  attachments.splice(idx, 1);
+  renderAttachments();
+});
+
+// 메시지 액션
+chatListEl.addEventListener("click", (e) => {
+  const btn = e.target.closest("button[data-action]");
+  if (!btn) return;
+  const id = Number(btn.dataset.id);
+  const action = btn.dataset.action;
+  const idx = messages.findIndex((m) => m.id === id);
+  if (idx === -1) return;
+
+  const msg = messages[idx];
+
+  if (action === "pin") {
+    pinnedId = pinnedId === id ? null : id;
+    refreshPinnedBar();
+    renderMessages();
+  }
+
+  if (action === "restart") {
+    if (
+      !confirm(
+        "이 메시지 이후의 대화 기록을 모두 지우고\n여기서부터 다시 시작할까요?"
+      )
+    )
+      return;
+    messages = messages.slice(0, idx + 1);
+    if (pinnedId && !messages.some((m) => m.id === pinnedId)) {
+      pinnedId = null;
+    }
+    renderMessages();
+    refreshPinnedBar();
+  }
+
+  if (action === "edit") {
+    const newText = prompt("메시지 수정", msg.content);
+    if (newText === null) return;
+    msg.content = newText;
+    renderMessages();
+    refreshPinnedBar();
+  }
+
+  if (action === "delete") {
+    if (!confirm("이 메시지를 삭제할까요?")) return;
+    messages.splice(idx, 1);
+    if (pinnedId === id) pinnedId = null;
+    renderMessages();
+    refreshPinnedBar();
+  }
+});
+
+// PIN 모달
+pinnedClearBtn.addEventListener("click", () => {
+  pinnedId = null;
+  refreshPinnedBar();
+  renderMessages();
+});
+
+pinnedContentBtn.addEventListener("click", () => {
+  if (!pinnedId) return;
+  const msg = messages.find((m) => m.id === pinnedId);
+  if (!msg) return;
+  pinModalBody.textContent = msg.content;
+  pinModalMeta.textContent = `${msg.role === "user" ? "소원" : "부감독"} · ${
+    msg.time || ""
+  }`;
+  pinModalBackdrop.classList.add("visible");
+});
+
+pinModalClose.addEventListener("click", () => {
+  pinModalBackdrop.classList.remove("visible");
+});
+
+pinModalBackdrop.addEventListener("click", (e) => {
+  if (e.target === pinModalBackdrop) {
+    pinModalBackdrop.classList.remove("visible");
+  }
+});
+
+// 초기 더미 메시지
+addMessage("assistant", "다시 연결 완료. 지금부터는 이 창이 소원 전용 대기실이야.");
+addMessage("user", "좋아. 오늘은 감정 말고 구조부터 같이 봐보자.");
+addMessage(
+  "assistant",
+  "오케이. 지금 화면 기준으로, 필요한 기능부터 하나씩 박아 나가면 된다."
+);
