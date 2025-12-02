@@ -2,8 +2,8 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <title>부감독 – Chat</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>부감독 – iPhone Chat</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -19,27 +19,38 @@
       --text-main: #111827;
       --text-sub: #4b5563;
       --text-muted: #9ca3af;
+
+      --dash-bg: #020617;
+      --dash-accent: #4f46e5;
+      --dash-accent-soft: rgba(129, 140, 248, 0.35);
+      --dash-bar-bg: rgba(15, 23, 42, 0.75);
+      --dash-bar-fill: linear-gradient(90deg, #4f46e5 0%, #8b5cf6 60%, #22c55e 100%);
+      --dash-bar-fill-alt: linear-gradient(90deg, #06b6d4 0%, #4ade80 60%, #facc15 100%);
     }
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
+
     html, body {
       height: 100%;
       font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
       background: linear-gradient(135deg, #f5f3f0 0%, #ebe8e3 100%);
       color: var(--text-main);
     }
+
     body {
       display: flex;
       justify-content: center;
       align-items: stretch;
-      padding: 12px;
+      padding: 8px;
       height: 100vh;
     }
+
     .app {
       width: 100%;
       max-width: 900px;
       height: 100%;
-      max-height: 720px;
-      background: rgba(255, 255, 255, 0.9);
+      max-height: 760px;
+      background: rgba(255, 255, 255, 0.95);
       border-radius: 24px;
       border: 1px solid var(--border-soft);
       box-shadow: 0 22px 45px rgba(15, 23, 42, 0.18);
@@ -48,51 +59,77 @@
       overflow: hidden;
     }
 
-    /* 헤더(까만 박스) */
-    .header {
-      padding: 12px 16px;
-      border-bottom: 1px solid rgba(148, 163, 184, 0.35);
+    /* 상단 대시보드 (어두운 박스) */
+    .dashboard {
+      background: radial-gradient(circle at top left, #111827, #020617 58%, #020617 100%);
+      color: #e5e7eb;
+      padding: 12px 14px 10px;
+      border-bottom: 1px solid rgba(15, 23, 42, 0.8);
+      box-shadow:
+        0 18px 40px rgba(15, 23, 42, 0.9),
+        inset 0 -1px 0 rgba(148, 163, 184, 0.18);
+      position: sticky;
+      top: 0;
+      z-index: 30;
+    }
+
+    .dash-top-row {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 8px;
-      background: #020617;
-      color: #e5e7eb;
-      position: sticky;
-      top: 0;
-      z-index: 20;
+      gap: 10px;
+      margin-bottom: 10px;
     }
-    .title-block {
+
+    .dash-title-block {
       display: flex;
       align-items: center;
       gap: 10px;
+      min-width: 0;
     }
-    .logo {
-      width: 26px;
-      height: 26px;
+
+    .dash-logo {
+      width: 28px;
+      height: 28px;
       border-radius: 999px;
-      background: radial-gradient(circle at top, rgba(251, 191, 36, 0.9), #92400e);
+      background: radial-gradient(circle at 30% 0, rgba(251, 191, 36, 0.95), #f97316);
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 16px;
       color: #111827;
-      box-shadow: 0 0 16px rgba(251, 191, 36, 0.8);
+      box-shadow: 0 0 18px rgba(251, 191, 36, 0.9);
+      flex-shrink: 0;
     }
-    .title-text {
+
+    .dash-texts {
       display: flex;
       flex-direction: column;
       gap: 2px;
+      min-width: 0;
     }
-    .title-main {
+
+    .dash-title-main {
       font-size: 14px;
       font-weight: 600;
+      letter-spacing: 0.02em;
     }
-    .title-sub {
+
+    .dash-title-sub {
       font-size: 11px;
       color: #9ca3af;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
-    .status-pill {
+
+    .dash-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .pill {
       display: inline-flex;
       align-items: center;
       gap: 6px;
@@ -100,28 +137,127 @@
       border-radius: 999px;
       border: 1px solid rgba(55, 65, 81, 0.9);
       background: rgba(15, 23, 42, 0.96);
-      font-size: 11px;
+      font-size: 10px;
       letter-spacing: 0.08em;
       text-transform: uppercase;
     }
-    .status-led {
-      width: 8px;
-      height: 8px;
+
+    .pill-led {
+      width: 7px;
+      height: 7px;
       border-radius: 999px;
-      background: #d1d5db;
-      box-shadow: 0 0 10px rgba(209, 213, 219, 0.9);
-    }
-    .status-pill.online .status-led {
       background: #22c55e;
       box-shadow: 0 0 10px rgba(34, 197, 94, 0.95);
     }
-    .status-pill.offline .status-led {
+
+    .pill.offline .pill-led {
       background: #ef4444;
       box-shadow: 0 0 10px rgba(239, 68, 68, 0.95);
     }
-    .status-pill.issue .status-led {
+
+    .pill.issue .pill-led {
       background: #facc15;
       box-shadow: 0 0 10px rgba(250, 204, 21, 0.95);
+    }
+
+    .call-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 999px;
+      border: 1px solid rgba(55, 65, 81, 0.9);
+      background: radial-gradient(circle at 30% 0, #22c55e, #16a34a);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow:
+        0 0 0 1px rgba(15, 23, 42, 0.9),
+        0 10px 24px rgba(22, 163, 74, 0.8);
+      transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease;
+      flex-shrink: 0;
+    }
+
+    .call-btn svg {
+      width: 16px;
+      height: 16px;
+      stroke: #ecfdf5;
+      stroke-width: 1.8;
+      fill: none;
+    }
+
+    .call-btn.active {
+      filter: saturate(1.2);
+      box-shadow:
+        0 0 0 2px rgba(34, 197, 94, 0.7),
+        0 0 24px rgba(34, 197, 94, 0.9);
+    }
+
+    .call-btn:active {
+      transform: translateY(1px);
+      box-shadow:
+        0 0 0 1px rgba(15, 23, 42, 0.9),
+        0 6px 16px rgba(22, 163, 74, 0.7);
+    }
+
+    .dash-usage-row {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .usage-line {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+    }
+
+    .usage-label {
+      min-width: 86px;
+      font-weight: 500;
+      color: #e5e7eb;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .usage-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: #4ade80;
+    }
+
+    .usage-dot.alt {
+      background: #22d3ee;
+    }
+
+    .usage-bar-wrap {
+      flex: 1;
+      height: 7px;
+      border-radius: 999px;
+      background: var(--dash-bar-bg);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .usage-bar-fill {
+      height: 100%;
+      width: 0;
+      border-radius: 999px;
+      background-image: var(--dash-bar-fill);
+      transition: width 0.25s ease;
+    }
+
+    .usage-bar-fill.alt {
+      background-image: var(--dash-bar-fill-alt);
+    }
+
+    .usage-percent {
+      width: 40px;
+      text-align: right;
+      color: #d1d5db;
+      font-variant-numeric: tabular-nums;
     }
 
     /* 채팅 영역 전체 */
@@ -129,9 +265,34 @@
       flex: 1;
       display: flex;
       flex-direction: column;
-      padding: 10px 12px 8px;
+      padding: 10px 10px 8px;
       min-height: 0;
     }
+
+    .call-banner {
+      display: none;
+      margin-bottom: 6px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.9);
+      color: #e5e7eb;
+      font-size: 11px;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .call-banner.active {
+      display: inline-flex;
+    }
+
+    .call-banner-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: #22c55e;
+      box-shadow: 0 0 10px rgba(34, 197, 94, 0.85);
+    }
+
     .chat-log {
       flex: 1;
       overflow-y: auto;
@@ -140,6 +301,7 @@
       flex-direction: column;
       gap: 8px;
     }
+
     .chat-log::-webkit-scrollbar { width: 4px; }
     .chat-log::-webkit-scrollbar-track { background: transparent; }
     .chat-log::-webkit-scrollbar-thumb {
@@ -152,7 +314,9 @@
       align-items: flex-start;
       gap: 8px;
     }
+
     .msg.user { justify-content: flex-end; }
+
     .avatar {
       width: 26px;
       height: 26px;
@@ -165,6 +329,7 @@
       justify-content: center;
       flex-shrink: 0;
     }
+
     .msg.user .avatar { display: none; }
 
     .bubble {
@@ -175,35 +340,42 @@
       line-height: 1.5;
       position: relative;
     }
+
     .msg.assistant .bubble {
       background: #f9fafb;
       border: 1px solid rgba(148, 163, 184, 0.3);
       border-bottom-left-radius: 4px;
     }
+
     .msg.user .bubble {
       background: #111827;
       color: #f9fafb;
       border-bottom-right-radius: 4px;
     }
+
     .bubble-name {
       font-size: 11px;
       font-weight: 500;
       color: var(--text-muted);
       margin-bottom: 2px;
     }
+
     .msg.user .bubble-name {
       text-align: right;
       color: rgba(209, 213, 219, 0.9);
     }
+
     .bubble-text {
       white-space: pre-wrap;
       word-break: break-word;
     }
+
     .bubble-meta {
       margin-top: 3px;
       font-size: 10px;
       color: var(--text-muted);
     }
+
     .msg.user .bubble-meta {
       text-align: right;
       color: rgba(156, 163, 175, 0.85);
@@ -219,13 +391,16 @@
       overflow-x: auto;
       -webkit-overflow-scrolling: touch;
     }
+
     .attachment-list::-webkit-scrollbar {
       height: 4px;
     }
+
     .attachment-list::-webkit-scrollbar-thumb {
       background: rgba(148, 163, 184, 0.6);
       border-radius: 999px;
     }
+
     .attachment-item {
       position: relative;
       flex: 0 0 90px;
@@ -239,16 +414,19 @@
       font-size: 11px;
       color: var(--text-sub);
     }
+
     .attachment-thumb {
       width: 100%;
       height: 100%;
       object-fit: cover;
     }
+
     .attachment-meta {
       padding: 6px 8px;
       font-size: 10px;
       text-align: center;
     }
+
     .attachment-remove {
       position: absolute;
       top: 4px;
@@ -267,8 +445,7 @@
       cursor: pointer;
     }
 
-    
-    /* 하단 입력 영역 – ChatGPT 스타일 리파인 */
+    /* 하단 입력 영역 – ChatGPT 스타일 */
     .input-area {
       margin-top: 8px;
       padding: 6px 2px 2px;
@@ -377,12 +554,12 @@
       padding: 0 4px 2px;
     }
 
-
     .typing .bubble {
       display: inline-flex;
       gap: 4px;
       align-items: center;
     }
+
     .dot {
       width: 5px;
       height: 5px;
@@ -391,8 +568,10 @@
       opacity: 0.6;
       animation: blink 1.2s infinite ease-in-out;
     }
+
     .dot:nth-child(2) { animation-delay: 0.15s; }
     .dot:nth-child(3) { animation-delay: 0.3s; }
+
     @keyframes blink {
       0%, 100% { opacity: 0.4; transform: translateY(0); }
       50%      { opacity: 1;   transform: translateY(-1px); }
@@ -413,28 +592,67 @@
 </head>
 <body>
   <div class="app">
-    <header class="header">
-      <div class="title-block">
-        <div class="logo">∞</div>
-        <div class="title-text">
-          <div class="title-main">부감독</div>
-          <div class="title-sub">Sowon · Personal Chat</div>
+    <!-- 상단 대시보드 -->
+    <div class="dashboard">
+      <div class="dash-top-row">
+        <div class="dash-title-block">
+          <div class="dash-logo">∞</div>
+          <div class="dash-texts">
+            <div class="dash-title-main">부감독 · iPhone</div>
+            <div class="dash-title-sub" id="dashSubText">Gemini & Native · 1인 전용 세션</div>
+          </div>
+        </div>
+        <div class="dash-actions">
+          <div class="pill" id="statusPill">
+            <span class="pill-led"></span>
+            <span id="statusText">ONLINE</span>
+          </div>
+          <button class="call-btn" id="callBtn" title="부감독과 통화 시작 (UI만 준비됨)">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M5 4.5c.5-1 1.5-1.5 2.6-1.5 1 0 1.9.4 2.6 1.1l1 1c.6.6.9 1.3.9 2.1 0 .8-.3 1.5-.9 2.1l-.9.9a.8.8 0 0 0-.2.8 7.4 7.4 0 0 0 3.9 3.9.8.8 0 0 0 .8-.2l.9-.9c.6-.6 1.3-.9 2.1-.9s1.5.3 2.1.9l1 1c.7.7 1.1 1.6 1.1 2.6 0 1.1-.5 2.1-1.5 2.6-.8.4-1.7.6-2.6.6C14 23 9.6 21 6.3 17.7 3 14.4 1 10 1 5.5c0-.9.2-1.8.6-2.6z"/>
+            </svg>
+          </button>
         </div>
       </div>
-      <div class="status-pill online" id="statusPill">
-        <span class="status-led"></span>
-        <span id="statusText">ONLINE</span>
+      <div class="dash-usage-row">
+        <div class="usage-line">
+          <div class="usage-label">
+            <span class="usage-dot"></span>
+            <span>Gemini API</span>
+          </div>
+          <div class="usage-bar-wrap">
+            <div class="usage-bar-fill" id="usageBarGemini"></div>
+          </div>
+          <div class="usage-percent" id="usagePercentGemini">0%</div>
+        </div>
+        <div class="usage-line">
+          <div class="usage-label">
+            <span class="usage-dot alt"></span>
+            <span>Native API</span>
+          </div>
+          <div class="usage-bar-wrap">
+            <div class="usage-bar-fill alt" id="usageBarNative"></div>
+          </div>
+          <div class="usage-percent" id="usagePercentNative">0%</div>
+        </div>
       </div>
-    </header>
+    </div>
 
+    <!-- 채팅 영역 -->
     <div class="chat-shell">
+      <div class="call-banner" id="callBanner">
+        <div class="call-banner-dot"></div>
+        <div>통화 모드 UI만 켜둔 상태야. 나중에 Gemini Live 연결하면 진짜 음성으로 붙이면 돼.</div>
+      </div>
+
       <div class="chat-log" id="chatLog">
         <div class="msg assistant">
           <div class="avatar">부</div>
           <div class="bubble">
             <div class="bubble-name">부감독</div>
             <div class="bubble-text">
-다시 연결됐네. 여긴 그냥 우리 둘만의 방이야.
+다시 연결됐네. 여긴 소원 아이폰 전용 방이야.
+위에는 제미나이 사용량, 아래는 그냥 우리 둘 채팅창.
 편하게 한 줄 던져봐.
             </div>
             <div class="bubble-meta">지금</div>
@@ -442,7 +660,6 @@
         </div>
       </div>
 
-      
       <form class="input-area" id="chatForm">
         <div class="attachment-list" id="attachmentList"></div>
         <div class="input-row">
@@ -472,13 +689,14 @@
         </div>
         <input type="file" id="fileInput" multiple style="display:none" />
       </form>
-
     </div>
   </div>
 
   <script>
+    // ------- 설정 -------
     const DIRECTOR_API_URL = "https://sowon.mooo.com/director_core/analyze";
 
+    // ------- DOM -------
     const statusPill = document.getElementById("statusPill");
     const statusText = document.getElementById("statusText");
     const chatLog = document.getElementById("chatLog");
@@ -489,8 +707,43 @@
     const attachBtn = document.getElementById("attachBtn");
     const fileInput = document.getElementById("fileInput");
     const attachmentList = document.getElementById("attachmentList");
+    const callBtn = document.getElementById("callBtn");
+    const callBanner = document.getElementById("callBanner");
+
+    const usageBarGemini = document.getElementById("usageBarGemini");
+    const usagePercentGemini = document.getElementById("usagePercentGemini");
+    const usageBarNative = document.getElementById("usageBarNative");
+    const usagePercentNative = document.getElementById("usagePercentNative");
 
     let pendingAttachments = [];
+    let usageState = {
+      gemini: { used: 0, quota: 100 },   // 나중에 실제 값으로 바꿔도 됨
+      native: { used: 0, quota: 100 }
+    };
+
+    function clamp(v, min, max) {
+      return Math.min(max, Math.max(min, v));
+    }
+
+    function updateUsageUI() {
+      const g = usageState.gemini;
+      const n = usageState.native;
+      const gPct = g.quota ? clamp((g.used / g.quota) * 100, 0, 100) : 0;
+      const nPct = n.quota ? clamp((n.used / n.quota) * 100, 0, 100) : 0;
+
+      usageBarGemini.style.width = gPct + "%";
+      usagePercentGemini.textContent = Math.round(gPct) + "%";
+
+      usageBarNative.style.width = nPct + "%";
+      usagePercentNative.textContent = Math.round(nPct) + "%";
+    }
+
+    function bumpUsageAfterSend() {
+      // 임시: 메시지 보낼 때마다 Gemini 사용량 1%씩 증가
+      usageState.gemini.used = clamp(usageState.gemini.used + 1, 0, usageState.gemini.quota);
+      // Native는 아직 0 유지해도 됨. 나중에 네이티브 붙이면 여기에서 증가.
+      updateUsageUI();
+    }
 
     function setStatus(label, mode) {
       if (!statusPill || !statusText) return;
@@ -498,8 +751,10 @@
       statusPill.classList.remove("online", "offline", "issue");
       if (mode) statusPill.classList.add(mode);
     }
+
     // 처음 상태는 ONLINE
     setStatus("ONLINE", "online");
+    updateUsageUI();
 
     function formatSize(bytes) {
       if (bytes < 1024) return bytes + "B";
@@ -561,7 +816,9 @@
 
       const name = document.createElement("div");
       name.className = "bubble-name";
-      name.textContent = role === "user" ? (options.userName || "소원") : (options.assistantName || "부감독");
+      name.textContent = role === "user"
+        ? (options.userName || "소원")
+        : (options.assistantName || "부감독");
 
       const body = document.createElement("div");
       body.className = "bubble-text";
@@ -633,7 +890,7 @@
         mode: "chat",
         text: textForLLM,
         user_id: "sowon",
-        source: "portal_chat"
+        source: "iphone_chat"
       };
       try {
         const res = await fetch(DIRECTOR_API_URL, {
@@ -653,6 +910,7 @@
       }
     }
 
+    // 첨부 버튼
     if (attachBtn && fileInput) {
       attachBtn.addEventListener("click", () => {
         fileInput.click();
@@ -662,10 +920,11 @@
         if (!files.length) return;
         pendingAttachments = pendingAttachments.concat(files);
         renderAttachments();
-        fileInput.value = ""; // 같은 파일 다시 선택 가능하도록 초기화
+        fileInput.value = "";
       });
     }
 
+    // 폼 전송
     if (chatForm && chatInput) {
       chatForm.addEventListener("submit", async (e) => {
         e.preventDefault();
@@ -676,24 +935,26 @@
         pendingAttachments = [];
         renderAttachments();
 
-        // LLM에게는 파일 메타정보를 텍스트로 붙여서 전달
         let textForLLM = text;
         if (filesSnapshot.length) {
           const summary = filesSnapshot
             .map(f => `${f.name} (${formatSize(f.size)}, ${f.type || "unknown"})`)
-            .join(", ");
-          textForLLM = `[첨부파일: ${summary}]\n\n` + (text || "");
+            .join("; ");
+          textForLLM += `\n\n[참고: 첨부 파일 메타정보] ${summary}`;
         }
 
         appendMessage("user", text || "(텍스트 없이 파일만 보냈어.)", {
           meta: "지금",
           attachments: filesSnapshot
         });
+
         chatInput.value = "";
         chatInput.style.height = "auto";
 
         setSending(true);
         const typingRow = appendTyping();
+
+        bumpUsageAfterSend();
 
         const reply = await sendToDirector(textForLLM);
 
@@ -711,12 +972,18 @@
       });
 
       chatInput.addEventListener("keydown", (e) => {
-        if (e.key === "Enter" && !e.shiftKey) {
+        if (e.key === "Enter" && !e.shiftKey && !e.isComposing) {
           e.preventDefault();
-          chatForm.dispatchEvent(
-            new Event("submit", { cancelable: true, bubbles: true })
-          );
+          chatForm.requestSubmit();
         }
+      });
+    }
+
+    // 콜 버튼 토글 (지금은 UI만)
+    if (callBtn && callBanner) {
+      callBtn.addEventListener("click", () => {
+        const active = callBtn.classList.toggle("active");
+        callBanner.classList.toggle("active", active);
       });
     }
   </script>
