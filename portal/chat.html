@@ -205,6 +205,34 @@
       color: rgba(156, 163, 175, 0.85);
     }
 
+    /* 첨부 파일 뱃지 */
+    .attachment-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-bottom: 4px;
+    }
+    .attachment-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(148, 163, 184, 0.16);
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      font-size: 11px;
+      color: var(--text-sub);
+    }
+    .attachment-pill button {
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      font-size: 11px;
+      padding: 0;
+      line-height: 1;
+      color: var(--text-muted);
+    }
+
     /* 하단 입력 영역 – 챗GPT 느낌 */
     .input-area {
       margin-top: 10px;
@@ -237,19 +265,19 @@
       font-size: 16px;
       color: var(--text-muted);
     }
-textarea.input {
-  flex: 1;
-  border: none;
-  outline: none;
-  resize: none;
-  background: transparent;
-  font-family: inherit;
-  font-size: 16px;   /* ← 이거만 14 → 16으로 */
-  line-height: 1.5;
-  padding: 4px 0;
-  min-height: 32px;
-  max-height: 120px;
-}
+    textarea.input {
+      flex: 1;
+      border: none;
+      outline: none;
+      resize: none;
+      background: transparent;
+      font-family: inherit;
+      font-size: 16px;
+      line-height: 1.5;
+      padding: 4px 0;
+      min-height: 32px;
+      max-height: 120px;
+    }
     textarea.input::placeholder {
       color: var(--text-muted);
     }
@@ -297,17 +325,15 @@ textarea.input {
       50%      { opacity: 1;   transform: translateY(-1px); }
     }
 
-@media (max-width: 600px) {
-  body { padding: 0; }
-  .app {
-    max-width: none;
-    max-height: none;
-    border-radius: 0;
-  }
-  textarea.input {
-    font-size: 16px;
-  }
-}
+    @media (max-width: 600px) {
+      body { padding: 0; }
+      .app {
+        max-width: none;
+      }
+      textarea.input {
+        font-size: 16px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -342,8 +368,9 @@ textarea.input {
       </div>
 
       <form class="input-area" id="chatForm">
+        <div class="attachment-list" id="attachmentList"></div>
         <div class="input-row">
-          <button type="button" class="attach-btn" title="첨부 (준비 중)">📎</button>
+          <button type="button" class="attach-btn" id="attachBtn" title="파일 첨부">📎</button>
           <textarea
             id="chatInput"
             class="input"
@@ -355,6 +382,7 @@ textarea.input {
         <div class="hint" id="hint">
           Enter로 보내고, Shift+Enter는 줄바꿈이야.
         </div>
+        <input type="file" id="fileInput" multiple style="display:none" />
       </form>
     </div>
   </div>
@@ -369,6 +397,11 @@ textarea.input {
     const chatInput = document.getElementById("chatInput");
     const sendBtn = document.getElementById("sendBtn");
     const hint = document.getElementById("hint");
+    const attachBtn = document.getElementById("attachBtn");
+    const fileInput = document.getElementById("fileInput");
+    const attachmentList = document.getElementById("attachmentList");
+
+    let pendingAttachments = [];
 
     function setStatus(label, mode) {
       if (!statusPill || !statusText) return;
@@ -378,6 +411,34 @@ textarea.input {
     }
     // 처음 상태는 ONLINE
     setStatus("ONLINE", "online");
+
+    function formatSize(bytes) {
+      if (bytes < 1024) return bytes + "B";
+      const kb = bytes / 1024;
+      if (kb < 1024) return kb.toFixed(0) + "KB";
+      const mb = kb / 1024;
+      return mb.toFixed(1) + "MB";
+    }
+
+    function renderAttachments() {
+      attachmentList.innerHTML = "";
+      if (!pendingAttachments.length) return;
+      pendingAttachments.forEach((file, idx) => {
+        const pill = document.createElement("div");
+        pill.className = "attachment-pill";
+        pill.innerHTML = `📎 <span>${file.name}</span><span style="opacity:.7;">(${formatSize(file.size)})</span>`;
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.textContent = "×";
+        btn.title = "제거";
+        btn.addEventListener("click", () => {
+          pendingAttachments.splice(idx, 1);
+          renderAttachments();
+        });
+        pill.appendChild(btn);
+        attachmentList.appendChild(pill);
+      });
+    }
 
     function appendMessage(role, text, options = {}) {
       const row = document.createElement("div");
@@ -393,35 +454,59 @@ textarea.input {
       const bubble = document.createElement("div");
       bubble.className = "bubble";
 
-      if (options.typing) {
-        row.classList.add("typing");
-        const wrap = document.createElement("div");
-        wrap.style.display = "inline-flex";
-        wrap.style.gap = "4px";
-        for (let i = 0; i < 3; i++) {
-          const d = document.createElement("div");
-          d.className = "dot";
-          wrap.appendChild(d);
-        }
-        bubble.appendChild(wrap);
-      } else {
-        const name = document.createElement("div");
-        name.className = "bubble-name";
-        name.textContent = role === "user" ? "소원" : "부감독";
+      const name = document.createElement("div");
+      name.className = "bubble-name";
+      name.textContent = role === "user" ? (options.userName || "소원") : (options.assistantName || "부감독");
 
-        const body = document.createElement("div");
-        body.className = "bubble-text";
-        body.textContent = text || "";
+      const body = document.createElement("div");
+      body.className = "bubble-text";
 
-        const meta = document.createElement("div");
-        meta.className = "bubble-meta";
-        meta.textContent = options.meta || "방금";
-
-        bubble.appendChild(name);
-        bubble.appendChild(body);
-        bubble.appendChild(meta);
+      if (options.attachments && options.attachments.length) {
+        const attSpan = document.createElement("div");
+        attSpan.style.fontSize = "11px";
+        attSpan.style.marginBottom = "4px";
+        attSpan.style.color = "var(--text-muted)";
+        attSpan.textContent = "📎 " + options.attachments.map(a => `${a.name} (${formatSize(a.size)})`).join(", ");
+        body.appendChild(attSpan);
       }
 
+      const textNode = document.createElement("div");
+      textNode.textContent = text || "";
+      body.appendChild(textNode);
+
+      const meta = document.createElement("div");
+      meta.className = "bubble-meta";
+      meta.textContent = options.meta || "방금";
+
+      bubble.appendChild(name);
+      bubble.appendChild(body);
+      bubble.appendChild(meta);
+
+      row.appendChild(bubble);
+      chatLog.appendChild(row);
+      chatLog.scrollTop = chatLog.scrollHeight;
+      return row;
+    }
+
+    function appendTyping() {
+      const row = document.createElement("div");
+      row.className = "msg assistant typing";
+      const avatar = document.createElement("div");
+      avatar.className = "avatar";
+      avatar.textContent = "부";
+      row.appendChild(avatar);
+
+      const bubble = document.createElement("div");
+      bubble.className = "bubble";
+      const wrap = document.createElement("div");
+      wrap.style.display = "inline-flex";
+      wrap.style.gap = "4px";
+      for (let i = 0; i < 3; i++) {
+        const d = document.createElement("div");
+        d.className = "dot";
+        wrap.appendChild(d);
+      }
+      bubble.appendChild(wrap);
       row.appendChild(bubble);
       chatLog.appendChild(row);
       chatLog.scrollTop = chatLog.scrollHeight;
@@ -438,10 +523,10 @@ textarea.input {
       }
     }
 
-    async function sendToDirector(text) {
+    async function sendToDirector(textForLLM) {
       const payload = {
         mode: "chat",
-        text,
+        text: textForLLM,
         user_id: "sowon",
         source: "portal_chat"
       };
@@ -463,20 +548,49 @@ textarea.input {
       }
     }
 
+    if (attachBtn && fileInput) {
+      attachBtn.addEventListener("click", () => {
+        fileInput.click();
+      });
+      fileInput.addEventListener("change", (e) => {
+        const files = Array.from(e.target.files || []);
+        if (!files.length) return;
+        pendingAttachments = pendingAttachments.concat(files);
+        renderAttachments();
+        fileInput.value = ""; // 같은 파일 다시 선택 가능하도록 초기화
+      });
+    }
+
     if (chatForm && chatInput) {
       chatForm.addEventListener("submit", async (e) => {
         e.preventDefault();
         const text = chatInput.value.trim();
-        if (!text) return;
+        if (!text && !pendingAttachments.length) return;
 
-        appendMessage("user", text, { meta: "지금" });
+        const filesSnapshot = pendingAttachments.slice();
+        pendingAttachments = [];
+        renderAttachments();
+
+        // LLM에게는 파일 메타정보를 텍스트로 붙여서 전달
+        let textForLLM = text;
+        if (filesSnapshot.length) {
+          const summary = filesSnapshot
+            .map(f => `${f.name} (${formatSize(f.size)}, ${f.type || "unknown"})`)
+            .join(", ");
+          textForLLM = `[첨부파일: ${summary}]\n\n` + (text || "");
+        }
+
+        appendMessage("user", text || "(텍스트 없이 파일만 보냈어.)", {
+          meta: "지금",
+          attachments: filesSnapshot
+        });
         chatInput.value = "";
         chatInput.style.height = "auto";
 
         setSending(true);
-        const typingRow = appendMessage("assistant", "", { typing: true });
+        const typingRow = appendTyping();
 
-        const reply = await sendToDirector(text);
+        const reply = await sendToDirector(textForLLM);
 
         if (typingRow && typingRow.parentNode) {
           typingRow.parentNode.removeChild(typingRow);
