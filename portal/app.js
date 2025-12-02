@@ -1,6 +1,6 @@
 // app.js
 // Spacetime Portal – 프론트만 있는 초기 버전
-// (백엔드는 나중에 Gemini/텔레그램/자동화 서버랑 연결)
+// (백엔드는 나중에 Gemini/텔레그램/자동화 서버랑 연결) 
 
 const PortalApp = (() => {
   const state = {
