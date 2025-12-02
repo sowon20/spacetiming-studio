@@ -55,7 +55,7 @@ document.addEventListener("DOMContentLoaded", () => {
       console.error(e);
       setStudioStatus("OFFLINE", "offline", "연결 없음");
       if (nowStatusText) {
-        nowStatusText.textContent = "sowon.mooo.com/director/health에 연결하지 못했어.";
+        nowStatusText.textContent = "sowon.mooo.com/director_core/health에 연결하지 못했어.";
       }
       if (loadPercent && loadBarFill) {
         loadPercent.textContent = "0%";
