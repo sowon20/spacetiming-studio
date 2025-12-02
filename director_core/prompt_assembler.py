@@ -1,6 +1,6 @@
 
 # director_core/prompt_assembler.py
-# v2 - 프롬프트/기억/대화 중앙 조립 모듈
+# v3 - 프롬프트/기억/대화 중앙 조립 모듈
 
 from __future__ import annotations
 

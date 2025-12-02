@@ -1212,3 +1212,60 @@
   background: rgba(0, 0, 0, 0.8);
   transform: scale(1.1);
 }
+
+/* ─────────────────────────────────────
+   Portal Chat – GPT-style refinements
+   ───────────────────────────────────── */
+
+.ai-comm-section {
+  position: relative;
+}
+
+/* 상단 헤더(까만 박스) 고정 & 다크 스타일 */
+.ai-comm-section .section-header {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  margin: -24px -24px 16px -24px;
+  padding: 14px 18px;
+  background: rgba(12, 12, 12, 0.94);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+}
+
+.ai-comm-section .section-title {
+  color: rgba(255, 255, 255, 0.82);
+}
+
+/* 헤더 안 통화 아이콘 버튼을 어두운 바에 맞게 정리 */
+.ai-comm-section .section-header .action-btn {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  color: #F9F8F6;
+}
+
+/* 채팅 영역 여백 조금만 위로 */
+.ai-comm-section .chat-container {
+  padding-top: 4px;
+}
+
+/* 입력 영역 – GPT 느낌으로 살짝 컴팩트하게 */
+.ai-comm-section .input-area {
+  margin-top: 8px;
+  padding: 6px 10px 6px 16px;
+  border-radius: 999px;
+}
+
+/* 입력 폰트 사이즈/높이 조정 (너무 크지 않게) */
+.ai-comm-section .input-field {
+  font-size: 13px;
+  min-height: 22px;
+  max-height: 90px;
+  line-height: 1.5;
+}
+
+/* 입력창 안 아이콘 크기 살짝 줄이기 */
+.ai-comm-section .input-area .action-btn {
+  width: 32px;
+  height: 32px;
+}
