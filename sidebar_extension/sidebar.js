@@ -21,7 +21,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   async function pingStudioStatus() {
     try {
-      const res = await fetch("https://sowon.mooo.com/director/health", {
+      const res = await fetch("https://sowon.mooo.com/director_core/health", {
         method: "GET",
       });
       if (!res.ok) {
@@ -55,7 +55,7 @@ document.addEventListener("DOMContentLoaded", () => {
       console.error(e);
       setStudioStatus("OFFLINE", "offline", "연결 없음");
       if (nowStatusText) {
-        nowStatusText.textContent = "sowon.mooo.com/health에 연결하지 못했어.";
+        nowStatusText.textContent = "sowon.mooo.com/director/health에 연결하지 못했어.";
       }
       if (loadPercent && loadBarFill) {
         loadPercent.textContent = "0%";
@@ -97,7 +97,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const chatSendButton = document.getElementById("chatSendButton");
   const chatHint = document.getElementById("chatHint");
 
-  const DIRECTOR_API_URL = "https://sowon.mooo.com/director/analyze";
+  const DIRECTOR_API_URL = "https://sowon.mooo.com/director_core/analyze";
 
   function appendMessage(role, text, options = {}) {
     if (!chatLog) return;
