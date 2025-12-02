@@ -237,19 +237,19 @@
       font-size: 16px;
       color: var(--text-muted);
     }
-    textarea.input {
-      flex: 1;
-      border: none;
-      outline: none;
-      resize: none;
-      background: transparent;
-      font-family: inherit;
-      font-size: 14px;
-      line-height: 1.5;
-      padding: 4px 0;
-      min-height: 32px;
-      max-height: 120px;
-    }
+textarea.input {
+  flex: 1;
+  border: none;
+  outline: none;
+  resize: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 16px;   /* ← 이거만 14 → 16으로 */
+  line-height: 1.5;
+  padding: 4px 0;
+  min-height: 32px;
+  max-height: 120px;
+}
     textarea.input::placeholder {
       color: var(--text-muted);
     }
@@ -297,14 +297,17 @@
       50%      { opacity: 1;   transform: translateY(-1px); }
     }
 
-    @media (max-width: 600px) {
-      body { padding: 0; }
-      .app {
-        max-width: none;
-        max-height: none;
-        border-radius: 0;
-      }
-    }
+@media (max-width: 600px) {
+  body { padding: 0; }
+  .app {
+    max-width: none;
+    max-height: none;
+    border-radius: 0;
+  }
+  textarea.input {
+    font-size: 16px;
+  }
+}
   </style>
 </head>
 <body>
