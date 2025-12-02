@@ -297,10 +297,10 @@
           <div class="title-sub">Sowon · Personal Chat</div>
         </div>
       </div>
-      <div class="status-pill" id="statusPill">
-        <span class="status-led"></span>
-        <span id="statusText">CHECKING…</span>
-      </div>
+<div class="status-pill online" id="statusPill">
+  <span class="status-led"></span>
+  <span id="statusText">ONLINE</span>
+</div>
     </header>
 
     <div class="chat-shell">
@@ -353,7 +353,15 @@
       statusPill.classList.remove("online", "offline", "issue");
       if (mode) statusPill.classList.add(mode);
     }
+function setStatus(label, mode) {
+  if (!statusPill || !statusText) return;
+  statusText.textContent = label;
+  statusPill.classList.remove("online", "offline", "issue");
+  if (mode) statusPill.classList.add(mode);
+}
 
+// 페이지 처음 열릴 때 바로 ONLINE으로 세팅
+setStatus("ONLINE", "online");
 
     function appendMessage(role, text, options = {}) {
       const row = document.createElement("div");
