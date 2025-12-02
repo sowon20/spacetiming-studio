@@ -20,47 +20,18 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function pingStudioStatus() {
-    try {
-      const res = await fetch("https://sowon.mooo.com/director_core/health", {
-        method: "GET",
-      });
-      if (!res.ok) {
-        setStudioStatus("ISSUE", "issue", "응답 지연");
-        if (nowStatusText) {
-          nowStatusText.textContent = "health는 응답했지만 상태 코드가 이상해.";
-        }
-        return;
-      }
-      const data = await res.json().catch(() => ({}));
-      const llmAvailable = !!data.llm_available;
+    // 일단 health 엔드포인트는 나중에 다시 맞추고,
+    // 지금은 그냥 항상 ONLINE으로만 표시해두자.
 
-      setStudioStatus(
-        llmAvailable ? "ONLINE" : "IDLE",
-        llmAvailable ? "online" : "issue",
-        llmAvailable ? "Gemini · Ready" : "LLM 대기 중"
-      );
+    setStudioStatus("ONLINE", "online", "수동 체크");
 
-      if (nowStatusText) {
-        nowStatusText.textContent = llmAvailable
-          ? "부감독이 바로 대답할 수 있는 상태야."
-          : "LLM 준비가 덜 된 것 같아도, 규칙 기반으로는 대답할 수 있어.";
-      }
+    if (nowStatusText) {
+      nowStatusText.textContent = "health 경로는 나중에 맞추고, 지금은 대화에만 집중하면 돼.";
+    }
 
-      if (loadPercent && loadBarFill) {
-        const p = llmAvailable ? 82 : 38;
-        loadPercent.textContent = `${p}%`;
-        loadBarFill.style.width = `${p}%`;
-      }
-    } catch (e) {
-      console.error(e);
-      setStudioStatus("OFFLINE", "offline", "연결 없음");
-      if (nowStatusText) {
-        nowStatusText.textContent = "sowon.mooo.com/director_core/health에 연결하지 못했어.";
-      }
-      if (loadPercent && loadBarFill) {
-        loadPercent.textContent = "0%";
-        loadBarFill.style.width = "0%";
-      }
+    if (loadPercent && loadBarFill) {
+      loadPercent.textContent = "0%";
+      loadBarFill.style.width = "0%";
     }
   }
 
