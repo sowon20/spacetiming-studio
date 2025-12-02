@@ -32,6 +32,7 @@
       justify-content: center;
       align-items: stretch;
       padding: 12px;
+      height: 100vh;
     }
     .app {
       width: 100%;
@@ -57,6 +58,9 @@
       gap: 8px;
       background: #020617;
       color: #e5e7eb;
+      position: sticky;
+      top: 0;
+      z-index: 20;
     }
     .title-block {
       display: flex;
@@ -205,32 +209,62 @@
       color: rgba(156, 163, 175, 0.85);
     }
 
-    /* 첨부 파일 뱃지 */
+    /* 첨부 파일 미리보기 – 가로 스크롤 썸네일 */
     .attachment-list {
       display: flex;
-      flex-wrap: wrap;
-      gap: 4px;
+      flex-direction: row;
+      gap: 8px;
+      padding: 4px 2px;
       margin-bottom: 4px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
     }
-    .attachment-pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      padding: 2px 8px;
+    .attachment-list::-webkit-scrollbar {
+      height: 4px;
+    }
+    .attachment-list::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, 0.6);
       border-radius: 999px;
-      background: rgba(148, 163, 184, 0.16);
-      border: 1px solid rgba(148, 163, 184, 0.35);
+    }
+    .attachment-item {
+      position: relative;
+      flex: 0 0 90px;
+      height: 90px;
+      border-radius: 16px;
+      background: #e5e7eb;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       font-size: 11px;
       color: var(--text-sub);
     }
-    .attachment-pill button {
+    .attachment-thumb {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .attachment-meta {
+      padding: 6px 8px;
+      font-size: 10px;
+      text-align: center;
+    }
+    .attachment-remove {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      width: 20px;
+      height: 20px;
+      border-radius: 999px;
       border: none;
-      background: transparent;
-      cursor: pointer;
-      font-size: 11px;
-      padding: 0;
+      background: rgba(15, 23, 42, 0.78);
+      color: #e5e7eb;
+      font-size: 13px;
       line-height: 1;
-      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
     }
 
     /* 하단 입력 영역 – 챗GPT 느낌 */
@@ -329,6 +363,8 @@
       body { padding: 0; }
       .app {
         max-width: none;
+        max-height: none;
+        border-radius: 0;
       }
       textarea.input {
         font-size: 16px;
@@ -423,20 +459,36 @@
     function renderAttachments() {
       attachmentList.innerHTML = "";
       if (!pendingAttachments.length) return;
+
       pendingAttachments.forEach((file, idx) => {
-        const pill = document.createElement("div");
-        pill.className = "attachment-pill";
-        pill.innerHTML = `📎 <span>${file.name}</span><span style="opacity:.7;">(${formatSize(file.size)})</span>`;
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.textContent = "×";
-        btn.title = "제거";
-        btn.addEventListener("click", () => {
+        const item = document.createElement("div");
+        item.className = "attachment-item";
+
+        if (file.type && file.type.startsWith("image/")) {
+          const img = document.createElement("img");
+          img.className = "attachment-thumb";
+          const url = URL.createObjectURL(file);
+          img.src = url;
+          img.onload = () => URL.revokeObjectURL(url);
+          item.appendChild(img);
+        } else {
+          const meta = document.createElement("div");
+          meta.className = "attachment-meta";
+          meta.textContent = file.name + " (" + formatSize(file.size) + ")";
+          item.appendChild(meta);
+        }
+
+        const removeBtn = document.createElement("button");
+        removeBtn.type = "button";
+        removeBtn.className = "attachment-remove";
+        removeBtn.textContent = "×";
+        removeBtn.addEventListener("click", () => {
           pendingAttachments.splice(idx, 1);
           renderAttachments();
         });
-        pill.appendChild(btn);
-        attachmentList.appendChild(pill);
+        item.appendChild(removeBtn);
+
+        attachmentList.appendChild(item);
       });
     }
 
