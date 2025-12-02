@@ -450,7 +450,7 @@ body.st-body {
 
 .st-chat-input-inner {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   gap: 6px;
   background: #f9fafb;
   border-radius: 999px;
@@ -467,6 +467,7 @@ body.st-body {
   font-family: inherit;
   font-size: 12px;
   max-height: 80px;
+  line-height: 1.4;
 }
 
 .st-chat-input::placeholder {
@@ -585,4 +586,53 @@ body.st-body {
   .st-chat-view {
     padding: 8px 8px 6px;
   }
+}
+.st-chat-input-inner {
+  display: flex;
+  align-items: center; /* ← 가운데 정렬 핵심 */
+  gap: 6px;
+  padding: 6px 10px;
+  border: 1px solid rgba(148,163,184,0.35);
+  border-radius: 999px;
+  background: #f9fafb;
+}
+
+.st-chat-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  resize: none;
+  background: transparent;
+  font-size: 13px;
+  line-height: 1.4; /* 세로 가운데 느낌 */
+}
+
+.st-chat-input::placeholder {
+  color: var(--text-muted);
+}
+
+.st-attach-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: none;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.st-attach-btn .material-symbols-rounded {
+  font-size: 18px;
+  color: var(--text-muted);
+}
+
+.st-chat-send {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }

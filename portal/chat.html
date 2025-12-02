@@ -336,7 +336,7 @@
   </div>
 
   <script>
-    const DIRECTOR_API_URL = "http://localhost:8000/director/analyze"; 
+    const DIRECTOR_API_URL = "https://sowon.mooo.com/director/analyze";
     // 필요하면 sowon.mooo.com/director/analyze 로 바꿔도 됨
 
     const statusPill = document.getElementById("statusPill");
@@ -356,7 +356,7 @@
 
     async function pingHealth() {
       try {
-        const res = await fetch("http://localhost:8000/health");
+        const res = await fetch("https://sowon.mooo.com/health");
         if (!res.ok) {
           setStatus("ISSUE", "issue");
           return;

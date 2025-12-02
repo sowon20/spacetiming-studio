@@ -84,22 +84,35 @@
               </div>
             </div>
 
-            <form id="chatForm" class="st-chat-input-area">
-              <div class="st-chat-input-inner">
-                <textarea
-                  id="chatInput"
-                  class="st-chat-input"
-                  rows="1"
-                  placeholder="여기에 적고 Enter로 보내. Shift+Enter는 줄바꿈."
-                ></textarea>
-                <button id="chatSendButton" class="st-btn primary st-chat-send" type="submit">
-                  <span class="material-symbols-rounded"> send </span>
-                </button>
-              </div>
-              <div class="st-chat-hint" id="chatHint">
-                LLM 상태를 확인하는 중이야…
-              </div>
-            </form>
+<form id="chatForm" class="st-chat-input-area">
+  <div class="st-chat-input-inner">
+    <!-- 첨부 버튼 (왼쪽) -->
+    <button type="button" class="st-attach-btn">
+      <span class="material-symbols-rounded">attach_file</span>
+    </button>
+
+    <!-- 텍스트 입력 -->
+    <textarea
+      id="chatInput"
+      class="st-chat-input"
+      rows="1"
+      placeholder="여기에 적고 Enter로 보내. Shift+Enter는 줄바꿈."
+    ></textarea>
+
+    <!-- 보내기 버튼 (오른쪽) -->
+    <button
+      id="chatSendButton"
+      class="st-btn primary st-chat-send"
+      type="submit"
+    >
+      <span class="material-symbols-rounded">send</span>
+    </button>
+  </div>
+
+  <div class="st-chat-hint" id="chatHint">
+    LLM 상태를 확인하는 중이야…
+  </div>
+</form>
           </section>
         </main>
 
