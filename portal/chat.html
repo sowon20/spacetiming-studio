@@ -354,32 +354,6 @@
       if (mode) statusPill.classList.add(mode);
     }
 
-    async function pingHealth() {
-      try {
-        const res = await fetch("https://sowon.mooo.com/director_core/health");
-        if (!res.ok) {
-          setStatus("ISSUE", "issue");
-          return;
-        }
-        const data = await res.json().catch(() => ({}));
-        const ok = !!data.llm_available;
-        setStatus(ok ? "ONLINE" : "IDLE", ok ? "online" : "issue");
-        if (hint) {
-          hint.textContent = ok
-            ? "Enter로 보내고, Shift+Enter로 줄바꿈할 수 있어."
-            : "LLM이 완벽하진 않아도, 규칙 기반으로는 대답할 수 있어.";
-        }
-      } catch (e) {
-        console.error(e);
-        setStatus("OFFLINE", "offline");
-        if (hint) {
-          hint.textContent = "health 체크에 실패했어. 서버 상태를 한 번 봐줘.";
-        }
-      }
-    }
-
-    pingHealth();
-    setInterval(pingHealth, 30000);
 
     function appendMessage(role, text, options = {}) {
       const row = document.createElement("div");
