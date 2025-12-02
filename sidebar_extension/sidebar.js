@@ -21,7 +21,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   async function pingStudioStatus() {
     try {
-      const res = await fetch("https://sowon.mooo.com/health", {
+      const res = await fetch("https://sowon.mooo.com/director/health", {
         method: "GET",
       });
       if (!res.ok) {

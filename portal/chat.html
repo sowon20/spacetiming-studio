@@ -356,7 +356,7 @@
 
     async function pingHealth() {
       try {
-        const res = await fetch("https://sowon.mooo.com/health");
+        const res = await fetch("https://sowon.mooo.com/director/health");
         if (!res.ok) {
           setStatus("ISSUE", "issue");
           return;
