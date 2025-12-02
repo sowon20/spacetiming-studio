@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>부감독 – Chat</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+    rel="stylesheet"
+  />
+  <style>
+    :root {
+      --bg: #ebe8e3;
+      --bg-elevated: #ffffff;
+      --border-soft: rgba(148, 163, 184, 0.26);
+      --text-main: #111827;
+      --text-sub: #4b5563;
+      --text-muted: #9ca3af;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      height: 100%;
+      font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      background: linear-gradient(135deg, #f5f3f0 0%, #ebe8e3 100%);
+      color: var(--text-main);
+    }
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: stretch;
+      padding: 12px;
+    }
+    .app {
+      width: 100%;
+      max-width: 900px;
+      height: 100%;
+      max-height: 720px;
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 24px;
+      border: 1px solid var(--border-soft);
+      box-shadow: 0 22px 45px rgba(15, 23, 42, 0.18);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .header {
+      padding: 12px 16px;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.35);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      background: #020617;
+      color: #e5e7eb;
+    }
+    .title-block {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .logo {
+      width: 26px;
+      height: 26px;
+      border-radius: 999px;
+      background: radial-gradient(circle at top, rgba(251, 191, 36, 0.9), #92400e);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      color: #111827;
+      box-shadow: 0 0 16px rgba(251, 191, 36, 0.8);
+    }
+    .title-text {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .title-main {
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .title-sub {
+      font-size: 11px;
+      color: #9ca3af;
+    }
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(55, 65, 81, 0.9);
+      background: rgba(15, 23, 42, 0.96);
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .status-led {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: #d1d5db;
+      box-shadow: 0 0 10px rgba(209, 213, 219, 0.9);
+    }
+    .status-pill.online .status-led {
+      background: #22c55e;
+      box-shadow: 0 0 10px rgba(34, 197, 94, 0.95);
+    }
+    .status-pill.offline .status-led {
+      background: #ef4444;
+      box-shadow: 0 0 10px rgba(239, 68, 68, 0.95);
+    }
+    .status-pill.issue .status-led {
+      background: #facc15;
+      box-shadow: 0 0 10px rgba(250, 204, 21, 0.95);
+    }
+
+    .chat-shell {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 10px 12px 8px;
+      min-height: 0;
+    }
+    .chat-log {
+      flex: 1;
+      overflow-y: auto;
+      padding: 4px 2px 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .chat-log::-webkit-scrollbar { width: 4px; }
+    .chat-log::-webkit-scrollbar-track { background: transparent; }
+    .chat-log::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, 0.6);
+      border-radius: 999px;
+    }
+
+    .msg {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+    .msg.user {
+      justify-content: flex-end;
+    }
+    .avatar {
+      width: 26px;
+      height: 26px;
+      border-radius: 999px;
+      background: #111827;
+      color: #e5e7eb;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .msg.user .avatar { display: none; }
+
+    .bubble {
+      max-width: 92%;
+      border-radius: 18px;
+      padding: 8px 10px 6px;
+      font-size: 13px;
+      line-height: 1.5;
+      position: relative;
+    }
+    .msg.assistant .bubble {
+      background: #f9fafb;
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      border-bottom-left-radius: 4px;
+    }
+    .msg.user .bubble {
+      background: #111827;
+      color: #f9fafb;
+      border-bottom-right-radius: 4px;
+    }
+    .bubble-name {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-bottom: 2px;
+    }
+    .msg.user .bubble-name {
+      text-align: right;
+      color: rgba(209, 213, 219, 0.9);
+    }
+    .bubble-text {
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .bubble-meta {
+      margin-top: 3px;
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+    .msg.user .bubble-meta {
+      text-align: right;
+      color: rgba(156, 163, 175, 0.85);
+    }
+
+    .input-area {
+      margin-top: 6px;
+      border-top: 1px solid rgba(209, 213, 219, 0.7);
+      padding-top: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .input-row {
+      display: flex;
+      align-items: flex-end;
+      gap: 6px;
+      background: #f9fafb;
+      border-radius: 999px;
+      padding: 4px 4px 4px 10px;
+      border: 1px solid rgba(148, 163, 184, 0.35);
+    }
+    textarea.input {
+      flex: 1;
+      border: none;
+      outline: none;
+      resize: none;
+      background: transparent;
+      font-family: inherit;
+      font-size: 13px;
+      max-height: 96px;
+    }
+    textarea.input::placeholder {
+      color: var(--text-muted);
+    }
+    button.send {
+      width: 32px;
+      height: 32px;
+      border-radius: 999px;
+      border: none;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      color: #eef2ff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    button.send:disabled {
+      opacity: 0.6;
+      cursor: default;
+    }
+    .hint {
+      font-size: 11px;
+      color: var(--text-muted);
+      padding: 0 4px 2px;
+    }
+
+    .typing .bubble {
+      display: inline-flex;
+      gap: 4px;
+      align-items: center;
+    }
+    .dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 999px;
+      background: #9ca3af;
+      opacity: 0.6;
+      animation: blink 1.2s infinite ease-in-out;
+    }
+    .dot:nth-child(2) { animation-delay: 0.15s; }
+    .dot:nth-child(3) { animation-delay: 0.3s; }
+    @keyframes blink {
+      0%, 100% { opacity: 0.4; transform: translateY(0); }
+      50%      { opacity: 1;   transform: translateY(-1px); }
+    }
+
+    @media (max-width: 600px) {
+      body { padding: 0; }
+      .app {
+        max-width: none;
+        max-height: none;
+        border-radius: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <div class="title-block">
+        <div class="logo">∞</div>
+        <div class="title-text">
+          <div class="title-main">부감독</div>
+          <div class="title-sub">Sowon · Personal Chat</div>
+        </div>
+      </div>
+      <div class="status-pill" id="statusPill">
+        <span class="status-led"></span>
+        <span id="statusText">CHECKING…</span>
+      </div>
+    </header>
+
+    <div class="chat-shell">
+      <div class="chat-log" id="chatLog">
+        <div class="msg assistant">
+          <div class="avatar">부</div>
+          <div class="bubble">
+            <div class="bubble-name">부감독</div>
+            <div class="bubble-text">
+다시 연결됐네. 여긴 그냥 우리 둘만의 방이야.
+편하게 한 줄 던져봐.
+            </div>
+            <div class="bubble-meta">지금</div>
+          </div>
+        </div>
+      </div>
+
+      <form class="input-area" id="chatForm">
+        <div class="input-row">
+          <textarea
+            id="chatInput"
+            class="input"
+            rows="1"
+            placeholder="여기에 적고 Enter로 보내. Shift+Enter는 줄바꿈."
+          ></textarea>
+          <button type="submit" class="send" id="sendBtn">⮞</button>
+        </div>
+        <div class="hint" id="hint">
+          LLM 상태를 확인하는 중이야…
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const DIRECTOR_API_URL = "http://localhost:8000/director/analyze"; 
+    // 필요하면 sowon.mooo.com/director/analyze 로 바꿔도 됨
+
+    const statusPill = document.getElementById("statusPill");
+    const statusText = document.getElementById("statusText");
+    const chatLog = document.getElementById("chatLog");
+    const chatForm = document.getElementById("chatForm");
+    const chatInput = document.getElementById("chatInput");
+    const sendBtn = document.getElementById("sendBtn");
+    const hint = document.getElementById("hint");
+
+    function setStatus(label, mode) {
+      if (!statusPill || !statusText) return;
+      statusText.textContent = label;
+      statusPill.classList.remove("online", "offline", "issue");
+      if (mode) statusPill.classList.add(mode);
+    }
+
+    async function pingHealth() {
+      try {
+        const res = await fetch("http://localhost:8000/health");
+        if (!res.ok) {
+          setStatus("ISSUE", "issue");
+          return;
+        }
+        const data = await res.json().catch(() => ({}));
+        const ok = !!data.llm_available;
+        setStatus(ok ? "ONLINE" : "IDLE", ok ? "online" : "issue");
+        if (hint) {
+          hint.textContent = ok
+            ? "Enter로 보내고, Shift+Enter로 줄바꿈할 수 있어."
+            : "LLM이 완벽하진 않아도, 규칙 기반으로는 대답할 수 있어.";
+        }
+      } catch (e) {
+        console.error(e);
+        setStatus("OFFLINE", "offline");
+        if (hint) {
+          hint.textContent = "health 체크에 실패했어. 서버 상태를 한 번 봐줘.";
+        }
+      }
+    }
+
+    pingHealth();
+    setInterval(pingHealth, 30000);
+
+    function appendMessage(role, text, options = {}) {
+      const row = document.createElement("div");
+      row.className = "msg " + role;
+
+      if (role === "assistant") {
+        const avatar = document.createElement("div");
+        avatar.className = "avatar";
+        avatar.textContent = "부";
+        row.appendChild(avatar);
+      }
+
+      const bubble = document.createElement("div");
+      bubble.className = "bubble";
+
+      if (options.typing) {
+        row.classList.add("typing");
+        const wrap = document.createElement("div");
+        wrap.style.display = "inline-flex";
+        wrap.style.gap = "4px";
+        for (let i = 0; i < 3; i++) {
+          const d = document.createElement("div");
+          d.className = "dot";
+          wrap.appendChild(d);
+        }
+        bubble.appendChild(wrap);
+      } else {
+        const name = document.createElement("div");
+        name.className = "bubble-name";
+        name.textContent = role === "user" ? "소원" : "부감독";
+
+        const body = document.createElement("div");
+        body.className = "bubble-text";
+        body.textContent = text || "";
+
+        const meta = document.createElement("div");
+        meta.className = "bubble-meta";
+        meta.textContent = options.meta || "방금";
+
+        bubble.appendChild(name);
+        bubble.appendChild(body);
+        bubble.appendChild(meta);
+      }
+
+      row.appendChild(bubble);
+      chatLog.appendChild(row);
+      chatLog.scrollTop = chatLog.scrollHeight;
+      return row;
+    }
+
+    function setSending(sending) {
+      if (sendBtn) sendBtn.disabled = sending;
+      if (chatInput) chatInput.disabled = sending;
+      if (hint) {
+        hint.textContent = sending
+          ? "부감독이 대답을 정리하는 중이야…"
+          : "Enter로 보내고, Shift+Enter로 줄바꿈할 수 있어.";
+      }
+    }
+
+    async function sendToDirector(text) {
+      const payload = {
+        mode: "chat",
+        text,
+        user_id: "sowon",
+        source: "portal_chat"
+      };
+      try {
+        const res = await fetch(DIRECTOR_API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) {
+          throw new Error("HTTP " + res.status);
+        }
+        const data = await res.json();
+        return data.reply || data.ai_text || "(응답은 왔는데 내용이 비어 있어.)";
+      } catch (e) {
+        console.error(e);
+        return "지금은 부감독 서버에 바로 연결이 잘 안 되는 것 같아.\n조금 있다가 다시 시도해보자.";
+      }
+    }
+
+    if (chatForm && chatInput) {
+      chatForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const text = chatInput.value.trim();
+        if (!text) return;
+
+        appendMessage("user", text, { meta: "지금" });
+        chatInput.value = "";
+        chatInput.style.height = "auto";
+
+        setSending(true);
+        const typingRow = appendMessage("assistant", "", { typing: true });
+
+        const reply = await sendToDirector(text);
+
+        if (typingRow && typingRow.parentNode) {
+          typingRow.parentNode.removeChild(typingRow);
+        }
+        appendMessage("assistant", reply, { meta: "방금" });
+        setSending(false);
+      });
+
+      chatInput.addEventListener("input", () => {
+        chatInput.style.height = "auto";
+        const max = 96;
+        chatInput.style.height = Math.min(chatInput.scrollHeight, max) + "px";
+      });
+
+      chatInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          chatForm.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true }));
+        }
+      });
+    }
+  </script>
+</body>
+</html>

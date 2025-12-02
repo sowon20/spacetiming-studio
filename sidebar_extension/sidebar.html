@@ -2,7 +2,7 @@
 <html lang="ko">
   <head>
     <meta charset="UTF-8" />
-    <title>Spacetime Studio</title>
+    <title>Spacetime Studio – 부감독</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -21,272 +21,104 @@
 
   <body class="st-body">
     <div class="st-app">
-      <!-- 상단 다크 박스 (샘플과 동일한 역할) -->
+      <!-- 상단 다크 박스 = 상태/요약 -->
       <header class="st-header">
         <div class="st-header-card">
           <div class="st-header-main">
-            <div class="st-app-text">
-              <div class="st-app-label">Studio</div>
+            <div class="st-app-title">
+              <div class="st-app-logo">∞</div>
+              <div class="st-app-text">
+                <div class="st-app-label">부감독</div>
+                <div class="st-app-sub">Sowon · Personal Timeline</div>
+              </div>
             </div>
-            <div class="status-pill status-ok" id="studioStatusPill">
+
+            <div class="status-pill" id="studioStatusPill">
               <span class="status-led"></span>
-              <span id="studioStatusText">ONLINE</span>
+              <span id="studioStatusText">CHECKING…</span>
             </div>
           </div>
 
           <div class="st-header-meta">
             <div class="st-header-block">
-              <div class="st-header-label">NEXT UPLOAD</div>
-              <div class="st-header-value" id="nextUploadText">-</div>
+              <div class="st-header-label">MODE</div>
+              <div class="st-header-value">Soulmate · Chat</div>
             </div>
             <div class="st-header-block">
-              <div class="st-header-label">STATUS</div>
-              <div class="st-header-pill">Ready</div>
+              <div class="st-header-label">SERVER</div>
+              <div class="st-header-pill" id="serverSummary">-</div>
             </div>
           </div>
 
           <div class="st-header-progress">
             <div class="st-header-progress-row">
               <div class="st-header-progress-label">NOW</div>
-              <div class="st-header-progress-text">Generating Veo video...</div>
-              <div class="st-header-progress-percent">68%</div>
+              <div class="st-header-progress-text" id="nowStatusText">
+                부감독이 숨 고르기 중…
+              </div>
+              <div class="st-header-progress-percent" id="loadPercent">–</div>
             </div>
             <div class="st-header-progress-bar">
-              <div class="st-header-progress-fill"></div>
+              <div class="st-header-progress-fill" id="loadBarFill"></div>
             </div>
           </div>
         </div>
       </header>
 
-      <!-- 메인 레이아웃: 왼쪽 콘텐츠 / 오른쪽 아이콘 레일 -->
+      <!-- 메인: 왼쪽 채팅 / 오른쪽 세로 탭 -->
       <div class="st-layout">
         <main class="st-main">
-          <div id="studioViews">
-          <!-- ========== DASHBOARD (CURRENT + NEXT 3 WEEKS) ========== -->
-          <section id="view-dashboard" class="view">
-            <div class="st-section-header">
-              <h2>CURRENT EPISODE</h2>
-            </div>
-
-            <!-- 현재 프로젝트 카드 -->
-            <section class="st-card st-current-card">
-              <div class="st-card-header">
-                <div class="st-current-meta">
-                  <div id="currentDate" class="st-current-date">-</div>
-                </div>
-                <button class="st-icon-button" type="button">
-                  <span class="material-symbols-rounded"> bookmark </span>
-                </button>
-              </div>
-
-              <h3 id="currentTitle" class="st-current-title">
-                아직 불러온 프로젝트가 없습니다.
-              </h3>
-
-              <p id="currentLogline" class="st-current-logline">
-                프롬프트를 생성하면 여기서 한 줄 콘셉트를 확인할 수 있어요.
-              </p>
-
-              <!-- 썸네일 / 비디오 프리뷰가 들어올 자리 (JS에서 채움) -->
-              <div id="currentThumbnail" class="st-current-media-slot">
-                <a
-                  href="https://youtu.be/1S7__LzfOUw?si=i1ozgdkIJH2-pkd7"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="st-youtube-link"
-                >
-                  <img
-                    src="https://img.youtube.com/vi/1S7__LzfOUw/hqdefault.jpg"
-                    alt="몽환적인 우주 냉장고 에피소드"
-                  />
-                  <div class="st-youtube-overlay">
-                    <span class="material-symbols-rounded"> play_circle </span>
-                    <span class="st-youtube-text">YouTube에서 보기</span>
+          <!-- 채팅 화면 (챗GPT 스타일) -->
+          <section id="view-chat" class="view st-chat-view">
+            <div class="st-chat-log" id="chatLog">
+              <!-- 초기 안내 메시지 -->
+              <div class="st-chat-message assistant">
+                <div class="st-chat-avatar">부</div>
+                <div class="st-chat-bubble">
+                  <div class="st-chat-name">부감독</div>
+                  <div class="st-chat-text">
+                    다시 만났네. 여긴 그냥 우리 둘만의 공간이야. 편한 말로 시작해도 돼.
                   </div>
-                </a>
-              </div>
-
-              <div class="st-progress-row">
-                <div class="st-progress-label">
-                  <span class="material-symbols-rounded"> progress_activity </span>
-                  <span id="currentStage">진행 단계 없음</span>
+                  <div class="st-chat-meta">지금</div>
                 </div>
-                <div class="st-progress-value" id="currentProgressText">0%</div>
               </div>
-
-              <div class="st-progress-bar">
-                <div class="st-progress-fill" id="currentProgressFill"></div>
-              </div>
-            </section>
-
-            <!-- 피드백 버튼 -->
-            <div class="st-feedback-buttons">
-              <button class="st-btn st-approve" type="button">합격</button>
-              <button class="st-btn st-revise" type="button">수정</button>
-              <button class="st-btn st-discard" type="button">폐기</button>
             </div>
 
-            <!-- Next 3 Weeks -->
-            <section class="st-section st-spacing-top">
-              <div class="st-section-header">
-                <h2>Next 3 Weeks</h2>
-                <span class="st-section-sub">세 편의 메인 업로드를 3주 단위로 정리</span>
-              </div>
-
-              <div class="st-card st-list-card" id="upcomingList">
-                <div class="st-empty">
-                  <span class="material-symbols-rounded">calendar_today</span>
-                  <div>아직 등록된 일정이 없어.</div>
-                  <div class="st-empty-sub">
-                    아이디어가 쌓이면 여기서 자동으로 일정이 정리돼.
-                  </div>
-                </div>
-              </div>
-            </section>
-          </section>
-
-          <!-- ========== PROMPT LAB ========== -->
-          <section id="view-prompt" class="view st-spacing-top-lg">
-            <div class="st-section-header">
-              <h2>Prompt Lab</h2>
-              <span class="st-section-sub">오늘 떠오른 장면이나 기분을 한 번에 정리</span>
-            </div>
-
-            <section class="st-card st-input-card">
-              <label for="ideaInput" class="st-field-label">Today&apos;s idea</label>
-              <textarea
-                id="ideaInput"
-                class="st-textarea"
-                placeholder="예: 지구가 만들어지는 과정을 소리 위주로 보여주는 몽환적인 영상…"
-              ></textarea>
-
-              <div class="st-input-footer">
-                <button id="btnGeneratePrompt" class="st-btn primary" type="button">
-                  <span class="material-symbols-rounded"> auto_fix_high </span>
-                  <span>부감독에게 맡기기</span>
-                </button>
-                <span id="ideaHint" class="st-hint">
-                  짧은 메모여도, 긴 독백이어도 괜찮아. 알아서 제목/프롬프트로 정리할게.
-                </span>
-              </div>
-            </section>
-
-            <!-- 출력 카드 -->
-            <section class="st-card st-output-card">
-              <div class="st-output-row">
-                <div class="st-output-label">
-                  <span class="material-symbols-rounded"> movie </span>
-                  <span>자동 제목</span>
-                </div>
-                <div id="titleOutput" class="st-output-value muted">
-                  아직 아이디어를 안 넘겨줬어.
-                </div>
-              </div>
-
-              <div class="st-divider"></div>
-
-              <div class="st-output-row column">
-                <div class="st-output-label">
-                  <span class="material-symbols-rounded"> description </span>
-                  <span>메인 프롬프트</span>
-                </div>
-                <pre id="mainPromptOutput" class="st-output-multiline muted">
-여기에 Veo 메인 프롬프트가 정리돼서 들어올 거야.</pre
-                >
-              </div>
-
-              <div class="st-output-row column">
-                <div class="st-output-label">
-                  <span class="material-symbols-rounded"> bolt </span>
-                  <span>티저 프롬프트</span>
-                </div>
-                <pre id="teaserPromptOutput" class="st-output-multiline muted">
-짧은 8초 분량의 티저 프롬프트가 여기에.</pre
-                >
-              </div>
-            </section>
-          </section>
-
-          <!-- ========== FLOW CONTROL ========== -->
-          <section id="view-flow" class="view st-spacing-top-lg">
-            <div class="st-section-header">
-              <h2>Flow Control</h2>
-              <span class="st-section-sub">지금 프롬프트로 자동 제작 시작하기</span>
-            </div>
-
-            <section class="st-card st-actions-card">
-              <div class="st-actions-row">
-                <button id="btnRunFlow" class="st-btn secondary" type="button">
-                  <span class="material-symbols-rounded"> play_circle </span>
-                  <span>Flow로 보내기</span>
-                </button>
-                <button id="btnCopyMain" class="st-btn ghost" type="button">
-                  <span class="material-symbols-rounded"> content_copy </span>
-                  <span>프롬프트 복사</span>
+            <form id="chatForm" class="st-chat-input-area">
+              <div class="st-chat-input-inner">
+                <textarea
+                  id="chatInput"
+                  class="st-chat-input"
+                  rows="1"
+                  placeholder="여기에 적고 Enter로 보내. Shift+Enter는 줄바꿈."
+                ></textarea>
+                <button id="chatSendButton" class="st-btn primary st-chat-send" type="submit">
+                  <span class="material-symbols-rounded"> send </span>
                 </button>
               </div>
-
-              <div id="statusBar" class="st-status-bar">
-                <span class="status-dot idle"></span>
-                <span id="statusText">대기 중…</span>
+              <div class="st-chat-hint" id="chatHint">
+                LLM 상태를 확인하는 중이야…
               </div>
-            </section>
-          </section>
-          </div> <!-- end #studioViews -->
-
-          <!-- ========== CHATGPT VIEW (SAMPLE) ========== -->
-          <section id="view-chatgpt" class="view st-chatgpt-view" hidden>
-            <div class="st-section-header">
-              <h2>ChatGPT</h2>
-              <span class="st-section-sub">대화는 새 탭에서 열려요.</span>
-            </div>
-
-            <section class="st-card st-chatgpt-card">
-              <div class="st-chatgpt-messages">
-                <div class="st-chatgpt-message you">
-                  <div class="st-chatgpt-label">You</div>
-                  <div class="st-chatgpt-bubble">내 영상 아이디어들을 정리하고 싶어.</div>
-                </div>
-                <div class="st-chatgpt-message bot">
-                  <div class="st-chatgpt-label">ChatGPT</div>
-                  <div class="st-chatgpt-bubble">
-                    좋아! 지금 작업 중인 시리즈나 채널 분위기를 먼저 알려줄래?
-                  </div>
-                </div>
-              </div>
-
-              <div class="st-chatgpt-input-row">
-                <input
-                  type="text"
-                  class="st-chatgpt-input"
-                  placeholder="ChatGPT에게 물어보고 싶은 걸 떠올려봐…"
-                  disabled
-                />
-                <button id="btnOpenChatGPT" class="st-btn primary" type="button">
-                  <span class="material-symbols-rounded"> open_in_new </span>
-                  <span>ChatGPT 열기</span>
-                </button>
-              </div>
-
-              <p class="st-chatgpt-hint">
-                버튼을 누르면 ChatGPT가 새 탭에서 열리고, 로그인 후 바로 나와 대화할 수 있어.
-              </p>
-            </section>
+            </form>
           </section>
         </main>
 
-        <!-- 오른쪽 둥근 아이콘 레일 (샘플 구조) -->
+        <!-- 오른쪽 세로 레일 (지금은 탭 2개만) -->
         <aside class="st-rail">
-          <button class="st-rail-btn active" type="button" data-tab="studio" aria-label="Studio dashboard">
-            <span class="material-symbols-rounded"> event </span>
-          </button>
-          <button class="st-rail-btn" type="button" data-tab="prompt" aria-label="Prompt Lab">
-            <span class="material-symbols-rounded"> auto_awesome </span>
-          </button>
-          <button class="st-rail-btn" type="button" data-tab="chatgpt" aria-label="ChatGPT">
+          <button
+            class="st-rail-btn active"
+            type="button"
+            data-tab="chat"
+            aria-label="Chat"
+          >
             <span class="material-symbols-rounded"> neurology </span>
           </button>
-          <button class="st-rail-btn" type="button" data-tab="memo" aria-label="Memo">
+          <button
+            class="st-rail-btn"
+            type="button"
+            data-tab="memo"
+            aria-label="Memo (준비중)"
+          >
             <span class="material-symbols-rounded"> edit_note </span>
           </button>
         </aside>
