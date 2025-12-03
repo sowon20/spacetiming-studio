@@ -2,92 +2,671 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <title>부감독 채팅</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <link rel="stylesheet" href="style.css" />
+  <title>부감독 – Chat</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+    rel="stylesheet"
+  />
+  <style>
+    :root {
+      --bg: #ebe8e3;
+      --bg-elevated: #ffffff;
+      --border-soft: rgba(148, 163, 184, 0.26);
+      --text-main: #111827;
+      --text-sub: #4b5563;
+      --text-muted: #9ca3af;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      height: 100%;
+      font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      background: linear-gradient(135deg, #f5f3f0 0%, #ebe8e3 100%);
+      color: var(--text-main);
+    }
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: stretch;
+      padding: 12px;
+      height: 100vh;
+    }
+    .app {
+      width: 100%;
+      max-width: 900px;
+      height: 100%;
+      max-height: 720px;
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 24px;
+      border: 1px solid var(--border-soft);
+      box-shadow: 0 22px 45px rgba(15, 23, 42, 0.18);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* 헤더(까만 박스) */
+    .header {
+      padding: 12px 16px;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.35);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      background: #020617;
+      color: #e5e7eb;
+      position: sticky;
+      top: 0;
+      z-index: 20;
+    }
+    .title-block {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .logo {
+      width: 26px;
+      height: 26px;
+      border-radius: 999px;
+      background: radial-gradient(circle at top, rgba(251, 191, 36, 0.9), #92400e);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      color: #111827;
+      box-shadow: 0 0 16px rgba(251, 191, 36, 0.8);
+    }
+    .title-text {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .title-main {
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .title-sub {
+      font-size: 11px;
+      color: #9ca3af;
+    }
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(55, 65, 81, 0.9);
+      background: rgba(15, 23, 42, 0.96);
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .status-led {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: #d1d5db;
+      box-shadow: 0 0 10px rgba(209, 213, 219, 0.9);
+    }
+    .status-pill.online .status-led {
+      background: #22c55e;
+      box-shadow: 0 0 10px rgba(34, 197, 94, 0.95);
+    }
+    .status-pill.offline .status-led {
+      background: #ef4444;
+      box-shadow: 0 0 10px rgba(239, 68, 68, 0.95);
+    }
+    .status-pill.issue .status-led {
+      background: #facc15;
+      box-shadow: 0 0 10px rgba(250, 204, 21, 0.95);
+    }
+
+    /* 채팅 영역 전체 */
+    .chat-shell {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 10px 12px 8px;
+      min-height: 0;
+    }
+    .chat-log {
+      flex: 1;
+      overflow-y: auto;
+      padding: 4px 2px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .chat-log::-webkit-scrollbar { width: 4px; }
+    .chat-log::-webkit-scrollbar-track { background: transparent; }
+    .chat-log::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, 0.6);
+      border-radius: 999px;
+    }
+
+    .msg {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+    .msg.user { justify-content: flex-end; }
+    .avatar {
+      width: 26px;
+      height: 26px;
+      border-radius: 999px;
+      background: #111827;
+      color: #e5e7eb;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .msg.user .avatar { display: none; }
+
+    .bubble {
+      max-width: 92%;
+      border-radius: 18px;
+      padding: 8px 10px 6px;
+      font-size: 13px;
+      line-height: 1.5;
+      position: relative;
+    }
+    .msg.assistant .bubble {
+      background: #f9fafb;
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      border-bottom-left-radius: 4px;
+    }
+    .msg.user .bubble {
+      background: #111827;
+      color: #f9fafb;
+      border-bottom-right-radius: 4px;
+    }
+    .bubble-name {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-bottom: 2px;
+    }
+    .msg.user .bubble-name {
+      text-align: right;
+      color: rgba(209, 213, 219, 0.9);
+    }
+    .bubble-text {
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .bubble-meta {
+      margin-top: 3px;
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+    .msg.user .bubble-meta {
+      text-align: right;
+      color: rgba(156, 163, 175, 0.85);
+    }
+
+    /* 첨부 파일 미리보기 – 가로 스크롤 썸네일 */
+    .attachment-list {
+      display: flex;
+      flex-direction: row;
+      gap: 8px;
+      padding: 4px 2px;
+      margin-bottom: 4px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .attachment-list::-webkit-scrollbar {
+      height: 4px;
+    }
+    .attachment-list::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, 0.6);
+      border-radius: 999px;
+    }
+    .attachment-item {
+      position: relative;
+      flex: 0 0 90px;
+      height: 90px;
+      border-radius: 16px;
+      background: #e5e7eb;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      color: var(--text-sub);
+    }
+    .attachment-thumb {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .attachment-meta {
+      padding: 6px 8px;
+      font-size: 10px;
+      text-align: center;
+    }
+    .attachment-remove {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      width: 20px;
+      height: 20px;
+      border-radius: 999px;
+      border: none;
+      background: rgba(15, 23, 42, 0.78);
+      color: #e5e7eb;
+      font-size: 13px;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    /* 하단 입력 영역 – 챗GPT 느낌 */
+    .input-area {
+      margin-top: 10px;
+      padding: 8px 2px 4px;
+      border-top: 1px solid rgba(209, 213, 219, 0.7);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .input-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #f9fafb;
+      border-radius: 16px;
+      padding: 8px 10px;
+      border: 1px solid rgba(148, 163, 184, 0.35);
+    }
+    .attach-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 999px;
+      border: none;
+      background: transparent;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      flex-shrink: 0;
+      font-size: 16px;
+      color: var(--text-muted);
+    }
+    textarea.input {
+      flex: 1;
+      border: none;
+      outline: none;
+      resize: none;
+      background: transparent;
+      font-family: inherit;
+      font-size: 16px;
+      line-height: 1.5;
+      padding: 4px 0;
+      min-height: 32px;
+      max-height: 120px;
+    }
+    textarea.input::placeholder {
+      color: var(--text-muted);
+    }
+    button.send {
+      width: 34px;
+      height: 34px;
+      border-radius: 999px;
+      border: none;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      color: #eef2ff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+    button.send:disabled {
+      opacity: 0.55;
+      cursor: default;
+    }
+    .hint {
+      font-size: 11px;
+      color: var(--text-muted);
+      padding: 0 4px 2px;
+    }
+
+    .typing .bubble {
+      display: inline-flex;
+      gap: 4px;
+      align-items: center;
+    }
+    .dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 999px;
+      background: #9ca3af;
+      opacity: 0.6;
+      animation: blink 1.2s infinite ease-in-out;
+    }
+    .dot:nth-child(2) { animation-delay: 0.15s; }
+    .dot:nth-child(3) { animation-delay: 0.3s; }
+    @keyframes blink {
+      0%, 100% { opacity: 0.4; transform: translateY(0); }
+      50%      { opacity: 1;   transform: translateY(-1px); }
+    }
+
+    @media (max-width: 600px) {
+      body { padding: 0; }
+      .app {
+        max-width: none;
+        max-height: none;
+        border-radius: 0;
+      }
+      textarea.input {
+        font-size: 16px;
+      }
+    }
+  </style>
 </head>
-<body class="mode-mobile">
-  <div class="app-shell">
-    <header class="top-region">
-      <div class="top-bar">
-        <div class="top-bar-title">SPACETIME DIRECTOR</div>
-        <div class="top-bar-main">
-          <div class="top-bar-main-left">
-            <span class="top-bar-dot"></span>
-            <span>부감독 · 라이브 세션</span>
-          </div>
-          <div class="top-bar-main-right" id="session-meta">
-            오늘 대화 로그
-          </div>
+<body>
+  <div class="app">
+    <header class="header">
+      <div class="title-block">
+        <div class="logo">∞</div>
+        <div class="title-text">
+          <div class="title-main">부감독</div>
+          <div class="title-sub">Sowon · Personal Chat</div>
         </div>
       </div>
-
-      <div id="pinned-bar" class="pinned-bar" hidden>
-        <span class="pinned-label">PIN</span>
-        <button id="pinned-content-btn" type="button">
-          <span id="pinned-summary" class="pinned-summary"></span>
-        </button>
-        <button id="pinned-clear" class="pinned-close" title="핀 해제">✕</button>
+      <div class="status-pill online" id="statusPill">
+        <span class="status-led"></span>
+        <span id="statusText">ONLINE</span>
       </div>
     </header>
 
-    <main class="main">
-      <section class="hero-section">
-        <div class="hero-title">Current Project</div>
-        <div class="hero-main-row">
-          <div class="hero-thumb">
-            <img src="https://img.youtube.com/vi/1S7__LzfOUw/hqdefault.jpg" alt="현재 프로젝트 썸네일" />
-          </div>
-          <div class="hero-info">
-            <div>
-              <div class="hero-project-title">우주의 끝: 심연의 시간 (Part 4)</div>
-              <div class="hero-project-desc">
-                블랙홀 내부 시뮬레이션 시퀀스 렌더링 및 사운드 싱크 작업 중.
-              </div>
+    <div class="chat-shell">
+      <div class="chat-log" id="chatLog">
+        <div class="msg assistant">
+          <div class="avatar">부</div>
+          <div class="bubble">
+            <div class="bubble-name">부감독</div>
+            <div class="bubble-text">
+다시 연결됐네. 여긴 그냥 우리 둘만의 방이야.
+편하게 한 줄 던져봐.
             </div>
-            <div class="hero-status-row">
-              <div class="hero-pill">
-                <span class="hero-pill-dot"></span>
-                <span>세션 연결 안정적</span>
-              </div>
-              <div class="hero-meta" id="hero-meta">오늘 0개 메시지 기록됨</div>
-            </div>
+            <div class="bubble-meta">지금</div>
           </div>
         </div>
-      </section>
+      </div>
 
-      <section id="chat-list" class="chat-section" aria-label="대화창">
-        <!-- 메시지들이 JS로 렌더링됨 -->
-      </section>
-    </main>
-
-    <footer class="composer">
-      <div id="attachments-strip" class="attachments-strip"></div>
-      <div class="composer-inner">
-        <button id="attach-btn" class="composer-button" title="파일 첨부">＋</button>
-        <div class="composer-textarea-wrap">
-          <textarea id="composer-input" class="composer-textarea"
-            rows="1" placeholder="부감독에게 메시지를 입력하세요"></textarea>
-          <div class="composer-hint">엔터: 전송 · Shift+Enter: 줄바꿈</div>
+      <form class="input-area" id="chatForm">
+        <div class="attachment-list" id="attachmentList"></div>
+        <div class="input-row">
+          <button type="button" class="attach-btn" id="attachBtn" title="파일 첨부">📎</button>
+          <textarea
+            id="chatInput"
+            class="input"
+            rows="1"
+            placeholder="여기에 적고 Enter로 보내. Shift+Enter는 줄바꿈."
+          ></textarea>
+          <button type="submit" class="send" id="sendBtn">⮞</button>
         </div>
-        <button id="send-btn" class="composer-button send-button disabled" title="전송">➤</button>
-      </div>
-      <input id="file-input" type="file" multiple />
-    </footer>
-  </div>
-
-  <!-- 핀 메시지 모달 -->
-  <div id="pin-modal-backdrop" class="modal-backdrop" role="dialog" aria-modal="true">
-    <div class="modal">
-      <div class="modal-header">
-        <span>핀 된 메시지</span>
-        <button id="pin-modal-close" class="modal-close" aria-label="닫기">×</button>
-      </div>
-      <div id="pin-modal-body" class="modal-body"></div>
-      <div id="pin-modal-meta" class="modal-meta"></div>
+        <div class="hint" id="hint">
+          Enter로 보내고, Shift+Enter는 줄바꿈이야.
+        </div>
+        <input type="file" id="fileInput" multiple style="display:none" />
+      </form>
     </div>
   </div>
 
-  <script src="app.js"></script>
+  <script>
+    const DIRECTOR_API_URL = "https://sowon.mooo.com/director_core/analyze";
+
+    const statusPill = document.getElementById("statusPill");
+    const statusText = document.getElementById("statusText");
+    const chatLog = document.getElementById("chatLog");
+    const chatForm = document.getElementById("chatForm");
+    const chatInput = document.getElementById("chatInput");
+    const sendBtn = document.getElementById("sendBtn");
+    const hint = document.getElementById("hint");
+    const attachBtn = document.getElementById("attachBtn");
+    const fileInput = document.getElementById("fileInput");
+    const attachmentList = document.getElementById("attachmentList");
+
+    let pendingAttachments = [];
+
+    function setStatus(label, mode) {
+      if (!statusPill || !statusText) return;
+      statusText.textContent = label;
+      statusPill.classList.remove("online", "offline", "issue");
+      if (mode) statusPill.classList.add(mode);
+    }
+    // 처음 상태는 ONLINE
+    setStatus("ONLINE", "online");
+
+    function formatSize(bytes) {
+      if (bytes < 1024) return bytes + "B";
+      const kb = bytes / 1024;
+      if (kb < 1024) return kb.toFixed(0) + "KB";
+      const mb = kb / 1024;
+      return mb.toFixed(1) + "MB";
+    }
+
+    function renderAttachments() {
+      attachmentList.innerHTML = "";
+      if (!pendingAttachments.length) return;
+
+      pendingAttachments.forEach((file, idx) => {
+        const item = document.createElement("div");
+        item.className = "attachment-item";
+
+        if (file.type && file.type.startsWith("image/")) {
+          const img = document.createElement("img");
+          img.className = "attachment-thumb";
+          const url = URL.createObjectURL(file);
+          img.src = url;
+          img.onload = () => URL.revokeObjectURL(url);
+          item.appendChild(img);
+        } else {
+          const meta = document.createElement("div");
+          meta.className = "attachment-meta";
+          meta.textContent = file.name + " (" + formatSize(file.size) + ")";
+          item.appendChild(meta);
+        }
+
+        const removeBtn = document.createElement("button");
+        removeBtn.type = "button";
+        removeBtn.className = "attachment-remove";
+        removeBtn.textContent = "×";
+        removeBtn.addEventListener("click", () => {
+          pendingAttachments.splice(idx, 1);
+          renderAttachments();
+        });
+        item.appendChild(removeBtn);
+
+        attachmentList.appendChild(item);
+      });
+    }
+
+    function appendMessage(role, text, options = {}) {
+      const row = document.createElement("div");
+      row.className = "msg " + role;
+
+      if (role === "assistant") {
+        const avatar = document.createElement("div");
+        avatar.className = "avatar";
+        avatar.textContent = "부";
+        row.appendChild(avatar);
+      }
+
+      const bubble = document.createElement("div");
+      bubble.className = "bubble";
+
+      const name = document.createElement("div");
+      name.className = "bubble-name";
+      name.textContent = role === "user" ? (options.userName || "소원") : (options.assistantName || "부감독");
+
+      const body = document.createElement("div");
+      body.className = "bubble-text";
+
+      if (options.attachments && options.attachments.length) {
+        const attSpan = document.createElement("div");
+        attSpan.style.fontSize = "11px";
+        attSpan.style.marginBottom = "4px";
+        attSpan.style.color = "var(--text-muted)";
+        attSpan.textContent = "📎 " + options.attachments.map(a => `${a.name} (${formatSize(a.size)})`).join(", ");
+        body.appendChild(attSpan);
+      }
+
+      const textNode = document.createElement("div");
+      textNode.textContent = text || "";
+      body.appendChild(textNode);
+
+      const meta = document.createElement("div");
+      meta.className = "bubble-meta";
+      meta.textContent = options.meta || "방금";
+
+      bubble.appendChild(name);
+      bubble.appendChild(body);
+      bubble.appendChild(meta);
+
+      row.appendChild(bubble);
+      chatLog.appendChild(row);
+      chatLog.scrollTop = chatLog.scrollHeight;
+      return row;
+    }
+
+    function appendTyping() {
+      const row = document.createElement("div");
+      row.className = "msg assistant typing";
+      const avatar = document.createElement("div");
+      avatar.className = "avatar";
+      avatar.textContent = "부";
+      row.appendChild(avatar);
+
+      const bubble = document.createElement("div");
+      bubble.className = "bubble";
+      const wrap = document.createElement("div");
+      wrap.style.display = "inline-flex";
+      wrap.style.gap = "4px";
+      for (let i = 0; i < 3; i++) {
+        const d = document.createElement("div");
+        d.className = "dot";
+        wrap.appendChild(d);
+      }
+      bubble.appendChild(wrap);
+      row.appendChild(bubble);
+      chatLog.appendChild(row);
+      chatLog.scrollTop = chatLog.scrollHeight;
+      return row;
+    }
+
+    function setSending(sending) {
+      if (sendBtn) sendBtn.disabled = sending;
+      if (chatInput) chatInput.disabled = sending;
+      if (hint) {
+        hint.textContent = sending
+          ? "부감독이 대답을 정리하는 중이야…"
+          : "Enter로 보내고, Shift+Enter는 줄바꿈이야.";
+      }
+    }
+
+    async function sendToDirector(textForLLM) {
+      const payload = {
+        mode: "chat",
+        text: textForLLM,
+        user_id: "sowon",
+        source: "portal_chat"
+      };
+      try {
+        const res = await fetch(DIRECTOR_API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) {
+          throw new Error("HTTP " + res.status);
+        }
+        const data = await res.json();
+        return data.reply || data.ai_text || "(응답은 왔는데 내용이 비어 있어.)";
+      } catch (e) {
+        console.error(e);
+        setStatus("OFFLINE", "offline");
+        return "지금은 부감독 서버에 바로 연결이 잘 안 되는 것 같아.\n조금 있다가 다시 시도해보자.";
+      }
+    }
+
+    if (attachBtn && fileInput) {
+      attachBtn.addEventListener("click", () => {
+        fileInput.click();
+      });
+      fileInput.addEventListener("change", (e) => {
+        const files = Array.from(e.target.files || []);
+        if (!files.length) return;
+        pendingAttachments = pendingAttachments.concat(files);
+        renderAttachments();
+        fileInput.value = ""; // 같은 파일 다시 선택 가능하도록 초기화
+      });
+    }
+
+    if (chatForm && chatInput) {
+      chatForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const text = chatInput.value.trim();
+        if (!text && !pendingAttachments.length) return;
+
+        const filesSnapshot = pendingAttachments.slice();
+        pendingAttachments = [];
+        renderAttachments();
+
+        // LLM에게는 파일 메타정보를 텍스트로 붙여서 전달
+        let textForLLM = text;
+        if (filesSnapshot.length) {
+          const summary = filesSnapshot
+            .map(f => `${f.name} (${formatSize(f.size)}, ${f.type || "unknown"})`)
+            .join(", ");
+          textForLLM = `[첨부파일: ${summary}]\n\n` + (text || "");
+        }
+
+        appendMessage("user", text || "(텍스트 없이 파일만 보냈어.)", {
+          meta: "지금",
+          attachments: filesSnapshot
+        });
+        chatInput.value = "";
+        chatInput.style.height = "auto";
+
+        setSending(true);
+        const typingRow = appendTyping();
+
+        const reply = await sendToDirector(textForLLM);
+
+        if (typingRow && typingRow.parentNode) {
+          typingRow.parentNode.removeChild(typingRow);
+        }
+        appendMessage("assistant", reply, { meta: "방금" });
+        setSending(false);
+      });
+
+      chatInput.addEventListener("input", () => {
+        chatInput.style.height = "auto";
+        const max = 120;
+        chatInput.style.height = Math.min(chatInput.scrollHeight, max) + "px";
+      });
+
+      chatInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          chatForm.dispatchEvent(
+            new Event("submit", { cancelable: true, bubbles: true })
+          );
+        }
+      });
+    }
+  </script>
 </body>
 </html>
+
