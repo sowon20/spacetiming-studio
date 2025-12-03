@@ -584,3 +584,54 @@ body.mode-mobile .composer {
   color: var(--text-muted);
   margin-top: 4px;
 }
+/* === Chat bubbles 재정의 (웹/아이폰 공통 느낌) === */
+
+.chat-section {
+  padding: 16px 12px 120px;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+/* 한 줄에 한 메시지 */
+.chat-row {
+  display: flex;
+  margin-bottom: 4px;
+}
+
+/* 사용자 / 부감독 정렬 */
+.chat-row.user {
+  justify-content: flex-end;
+}
+
+.chat-row.assistant {
+  justify-content: flex-start;
+}
+
+/* 공통 말풍선 */
+.chat-bubble {
+  max-width: 72%;
+  padding: 10px 12px;
+  border-radius: 18px;
+  font-size: 14px;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+/* 소원(유저) – 아이폰 메세지 느낌 */
+.chat-bubble.user {
+  background: #d9fdd3;
+  color: #111827;
+  border-bottom-right-radius: 4px;
+}
+
+/* 부감독 – 텔레그램/아이메 진한 회색 */
+.chat-bubble.assistant {
+  background: #22252b;
+  color: #f9fafb;
+  border-bottom-left-radius: 4px;
+}
+
+/* 말풍선 사이 여백(두 줄로 보이는 느낌 줄이기) */
+.chat-row + .chat-row {
+  margin-top: 6px;
+}
