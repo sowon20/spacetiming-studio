@@ -1,338 +1,350 @@
-// 간단한 상태
-let messages = [];
-let nextId = 1;
-let pinnedId = null;
-let attachments = [];
+const DIRECTOR_API_URL = "/api/chat";
 
 const chatListEl = document.getElementById("chat-list");
-const inputEl = document.getElementById("composer-input");
+const sessionMetaEl = document.getElementById("session-meta");
+const pinnedBarEl = document.getElementById("pinned-bar");
+const pinnedSummaryEl = document.getElementById("pinned-summary");
+const pinnedContentBtn = document.getElementById("pinned-content-btn");
+const pinnedClearBtn = document.getElementById("pinned-clear");
+
+const composerInput = document.getElementById("composer-input");
 const sendBtn = document.getElementById("send-btn");
 const attachBtn = document.getElementById("attach-btn");
 const fileInput = document.getElementById("file-input");
 const attachmentsStrip = document.getElementById("attachments-strip");
-const pinnedBar = document.getElementById("pinned-bar");
-const pinnedSummaryEl = document.getElementById("pinned-summary");
-const pinnedClearBtn = document.getElementById("pinned-clear");
-const pinnedContentBtn = document.getElementById("pinned-content-btn");
+
 const pinModalBackdrop = document.getElementById("pin-modal-backdrop");
 const pinModalBody = document.getElementById("pin-modal-body");
 const pinModalMeta = document.getElementById("pin-modal-meta");
 const pinModalClose = document.getElementById("pin-modal-close");
-const heroMeta = document.getElementById("hero-meta");
 
-const DIRECTOR_API_URL = "/api/chat";
+let messages = [];
+let pinnedId = null;
+let attachments = [];
+let typingRow = null;
 
-function nowTimeString() {
+const STORAGE_KEY = "director_chat_messages_v1";
+
+function nowTime() {
   const d = new Date();
-  const h = d.getHours();
-  const m = String(d.getMinutes()).padStart(2, "0");
-  const ampm = h < 12 ? "오전" : "오후";
-  const hour12 = h % 12 || 12;
-  return `${ampm} ${hour12}:${m}`;
+  const hh = d.getHours().toString().padStart(2, "0");
+  const mm = d.getMinutes().toString().padStart(2, "0");
+  return `${hh}:${mm}`;
+}
+
+function saveToStorage() {
+  try {
+    const payload = {
+      messages,
+      pinnedId,
+    };
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+  } catch (_) {
+    // ignore
+  }
+}
+
+function loadFromStorage() {
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    messages = parsed.messages || [];
+    pinnedId = parsed.pinnedId || null;
+  } catch (_) {
+    // ignore
+  }
+}
+
+function renderPinned() {
+  if (!pinnedId) {
+    pinnedBarEl.hidden = true;
+    return;
+  }
+  const msg = messages.find((m) => m.id === pinnedId);
+  if (!msg) {
+    pinnedId = null;
+    pinnedBarEl.hidden = true;
+    return;
+  }
+  pinnedBarEl.hidden = false;
+  pinnedSummaryEl.textContent =
+    msg.content.length > 60 ? msg.content.slice(0, 60) + "…" : msg.content;
 }
 
 function renderMessages() {
   chatListEl.innerHTML = "";
-  messages.forEach((msg) => {
-    const li = document.createElement("article");
-    li.className = `message ${msg.role}` + (msg.id === pinnedId ? " pinned" : "");
-    li.dataset.id = msg.id;
+  messages.forEach((m) => {
+    const row = document.createElement("article");
+    row.className = `message-row ${m.role}`;
+    row.dataset.id = m.id;
 
     const header = document.createElement("div");
     header.className = "msg-header";
 
     const author = document.createElement("span");
     author.className = "msg-author";
-    author.textContent = msg.role === "user" ? "소원" : "부감독";
+    author.textContent = m.role === "user" ? "소원" : "부감독";
+
+    const timeEl = document.createElement("span");
+    timeEl.className = "msg-time";
+    timeEl.textContent = m.time || "";
 
     const actions = document.createElement("div");
     actions.className = "msg-actions";
 
-    const btnPin = document.createElement("button");
-    btnPin.textContent = "📌";
-    btnPin.title = "이 메시지 핀 고정";
-    btnPin.dataset.action = "pin";
-    btnPin.dataset.id = msg.id;
+    const pinBtn = document.createElement("button");
+    pinBtn.textContent = "📌";
+    pinBtn.title = "핀";
+    pinBtn.onclick = () => {
+      pinnedId = m.id;
+      saveToStorage();
+      renderPinned();
+    };
 
-    const btnRestart = document.createElement("button");
-    btnRestart.textContent = "↺";
-    btnRestart.title = "이 순간부터 다시 시작";
-    btnRestart.dataset.action = "restart";
-    btnRestart.dataset.id = msg.id;
+    const editBtn = document.createElement("button");
+    editBtn.textContent = "✎";
+    editBtn.title = "수정 (아직 준비 중)";
+    editBtn.disabled = true;
 
-    const btnEdit = document.createElement("button");
-    btnEdit.textContent = "✎";
-    btnEdit.title = "수정";
-    btnEdit.dataset.action = "edit";
-    btnEdit.dataset.id = msg.id;
+    const delBtn = document.createElement("button");
+    delBtn.textContent = "🗑";
+    delBtn.title = "삭제";
+    delBtn.onclick = () => {
+      messages = messages.filter((x) => x.id !== m.id);
+      if (pinnedId === m.id) pinnedId = null;
+      saveToStorage();
+      renderMessages();
+      renderPinned();
+      updateSessionMeta();
+    };
 
-    const btnDelete = document.createElement("button");
-    btnDelete.textContent = "🗑";
-    btnDelete.title = "삭제";
-    btnDelete.dataset.action = "delete";
-    btnDelete.dataset.id = msg.id;
+    actions.append(pinBtn, editBtn, delBtn);
 
-    actions.append(btnPin, btnRestart, btnEdit, btnDelete);
-    header.append(author, actions);
+    header.append(author, timeEl, actions);
+
+    const bubbleWrap = document.createElement("div");
+    bubbleWrap.className = "msg-bubble-wrap";
 
     const bubble = document.createElement("div");
-    bubble.className = "bubble";
-    bubble.textContent = msg.content;
+    bubble.className = "msg-bubble";
+    bubble.textContent = m.content;
 
-    const meta = document.createElement("div");
-    meta.className = "msg-meta";
-    meta.textContent = msg.time || "";
+    bubbleWrap.appendChild(bubble);
 
-    li.append(header, bubble, meta);
-    chatListEl.appendChild(li);
+    row.append(header, bubbleWrap);
+    chatListEl.appendChild(row);
   });
 
+  if (typingRow) {
+    chatListEl.appendChild(typingRow);
+  }
+
   chatListEl.scrollTop = chatListEl.scrollHeight;
+  updateSessionMeta();
 }
 
-function refreshPinnedBar() {
-  if (!pinnedId) {
-    pinnedBar.hidden = true;
-    return;
-  }
-  const msg = messages.find((m) => m.id === pinnedId);
-  if (!msg) {
-    pinnedId = null;
-    pinnedBar.hidden = true;
-    return;
-  }
-  pinnedBar.hidden = false;
-  const summary =
-    msg.content.length > 60 ? msg.content.slice(0, 60) + "…" : msg.content;
-  pinnedSummaryEl.textContent = summary;
+function updateSessionMeta() {
+  const count = messages.length;
+  sessionMetaEl.textContent = `오늘 ${count}개 메시지`;
 }
 
 function addMessage(role, content) {
   const msg = {
-    id: nextId++,
+    id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
     role,
     content,
-    time: nowTimeString(),
-    attachments: attachments.slice(),
+    time: nowTime(),
   };
   messages.push(msg);
-  heroMeta.textContent = `오늘 ${messages.length}개 메시지 기록됨`;
-  attachments = [];
-  renderAttachments();
+  saveToStorage();
   renderMessages();
+  return msg;
+}
+
+function clearTyping() {
+  if (typingRow) {
+    typingRow.remove();
+    typingRow = null;
+  }
+}
+
+function showTyping() {
+  clearTyping();
+  const row = document.createElement("article");
+  row.className = "message-row assistant typing";
+
+  const header = document.createElement("div");
+  header.className = "msg-header";
+
+  const author = document.createElement("span");
+  author.className = "msg-author";
+  author.textContent = "부감독";
+
+  const timeEl = document.createElement("span");
+  timeEl.className = "msg-time";
+  timeEl.textContent = "";
+
+  const actions = document.createElement("div");
+  actions.className = "msg-actions";
+
+  header.append(author, timeEl, actions);
+
+  const wrap = document.createElement("div");
+  wrap.className = "msg-bubble-wrap";
+
+  const bubble = document.createElement("div");
+  bubble.className = "msg-bubble";
+
+  for (let i = 0; i < 3; i++) {
+    const dot = document.createElement("span");
+    dot.className = "typing-dot";
+    bubble.appendChild(dot);
+  }
+
+  wrap.appendChild(bubble);
+  row.append(header, wrap);
+  typingRow = row;
+
+  chatListEl.appendChild(row);
+  chatListEl.scrollTop = chatListEl.scrollHeight;
 }
 
 function renderAttachments() {
   attachmentsStrip.innerHTML = "";
-  if (!attachments.length) {
-    attachmentsStrip.classList.remove("visible");
-    return;
-  }
-  attachmentsStrip.classList.add("visible");
-  attachments.forEach((item, idx) => {
-    const chip = document.createElement("div");
-    const isImage = !!item.previewUrl;
-    chip.className = "attachment-chip" + (isImage ? " image" : "");
+  attachments.forEach((f, idx) => {
+    const pill = document.createElement("div");
+    pill.className = "attachment-pill";
 
-    if (isImage) {
-      const img = document.createElement("img");
-      img.className = "attachment-preview-img";
-      img.src = item.previewUrl;
-      chip.appendChild(img);
-    } else {
-      const name = document.createElement("span");
-      name.className = "attachment-name";
-      name.textContent = item.file.name;
-      chip.appendChild(name);
-    }
+    const nameSpan = document.createElement("span");
+    nameSpan.textContent = f.name;
 
-    const btnRemove = document.createElement("button");
-    btnRemove.className = "attachment-remove";
-    btnRemove.textContent = "×";
-    btnRemove.dataset.index = idx;
-    chip.appendChild(btnRemove);
+    const removeBtn = document.createElement("button");
+    removeBtn.className = "attachment-remove";
+    removeBtn.textContent = "×";
+    removeBtn.onclick = () => {
+      attachments.splice(idx, 1);
+      renderAttachments();
+    };
 
-    attachmentsStrip.appendChild(chip);
+    pill.append(nameSpan, removeBtn);
+    attachmentsStrip.appendChild(pill);
   });
 }
 
-// 입력창 동작
-inputEl.addEventListener("input", () => {
-  inputEl.style.height = "auto";
-  inputEl.style.height = inputEl.scrollHeight + "px";
-  const hasText = inputEl.value.trim().length > 0;
-  sendBtn.classList.toggle("disabled", !hasText);
-});
-
-inputEl.addEventListener("keydown", (e) => {
-  if (e.key === "Enter" && !e.shiftKey) {
-    e.preventDefault();
-    handleSend();
-  }
-});
-
-sendBtn.addEventListener("click", () => {
-  if (sendBtn.classList.contains("disabled")) return;
-  handleSend();
-});
-
-async function sendToDirector(textForLLM) {
+async function sendToDirector(text) {
   const payload = {
     messages: [
       {
         role: "user",
-        content: textForLLM,
+        content: text,
       },
     ],
   };
 
   const res = await fetch(DIRECTOR_API_URL, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+    },
     body: JSON.stringify(payload),
   });
 
   if (!res.ok) {
-    throw new Error("HTTP " + res.status);
+    throw new Error(`HTTP ${res.status}`);
   }
-
   const data = await res.json();
-  // director_server_v1/main.py는 {"reply": "..."} 형태를 반환하므로 reply 우선 사용
-  return data.reply || data.ai_text || "(응답은 왔는데 내용이 비어 있어.)";
+  return data.reply || "(응답이 비었어.)";
 }
 
 async function handleSend() {
-  const text = inputEl.value.trim();
-  if (!text) return;
-  addMessage("user", text);
-  inputEl.value = "";
-  inputEl.style.height = "auto";
+  const raw = composerInput.value.trim();
+  if (!raw) return;
+
+  addMessage("user", raw);
+  composerInput.value = "";
   sendBtn.classList.add("disabled");
 
+  showTyping();
+
   try {
-    const reply = await sendToDirector(text);
-    addMessage("assistant", reply);
-  } catch (e) {
-    console.error(e);
-    addMessage(
-      "assistant",
-      "지금은 부감독 서버 연결이 불안정해. 조금 있다가 다시 시도해보자."
-    );
+    const replyText = await sendToDirector(raw);
+    clearTyping();
+    addMessage("assistant", replyText);
+  } catch (err) {
+    clearTyping();
+    addMessage("assistant", `연결 중 오류가 났어.
+(${err.message})`);
   }
 }
 
-// 파일 첨부
-attachBtn.addEventListener("click", () => {
-  fileInput.click();
-});
-
-fileInput.addEventListener("change", () => {
-  const files = Array.from(fileInput.files || []);
-  files.forEach((file) => {
-    const item = { file, previewUrl: null };
-    if (file.type.startsWith("image/")) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        item.previewUrl = e.target.result;
-        renderAttachments();
-      };
-      reader.readAsDataURL(file);
+function initEvents() {
+  composerInput.addEventListener("input", () => {
+    const hasText = composerInput.value.trim().length > 0;
+    if (hasText) {
+      sendBtn.classList.remove("disabled");
+    } else {
+      sendBtn.classList.add("disabled");
     }
-    attachments.push(item);
   });
-  renderAttachments();
-  fileInput.value = "";
-});
 
-attachmentsStrip.addEventListener("click", (e) => {
-  const btn = e.target.closest(".attachment-remove");
-  if (!btn) return;
-  const idx = Number(btn.dataset.index);
-  attachments.splice(idx, 1);
-  renderAttachments();
-});
-
-// 메시지 액션
-chatListEl.addEventListener("click", (e) => {
-  const btn = e.target.closest("button[data-action]");
-  if (!btn) return;
-  const id = Number(btn.dataset.id);
-  const action = btn.dataset.action;
-  const idx = messages.findIndex((m) => m.id === id);
-  if (idx === -1) return;
-
-  const msg = messages[idx];
-
-  if (action === "pin") {
-    pinnedId = pinnedId === id ? null : id;
-    refreshPinnedBar();
-    renderMessages();
-  }
-
-  if (action === "restart") {
-    if (
-      !confirm(
-        "이 메시지 이후의 대화 기록을 모두 지우고\n여기서부터 다시 시작할까요?"
-      )
-    )
-      return;
-    messages = messages.slice(0, idx + 1);
-    if (pinnedId && !messages.some((m) => m.id === pinnedId)) {
-      pinnedId = null;
+  composerInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      if (!sendBtn.classList.contains("disabled")) {
+        handleSend();
+      }
     }
-    renderMessages();
-    refreshPinnedBar();
-  }
+  });
 
-  if (action === "edit") {
-    const newText = prompt("메시지 수정", msg.content);
-    if (newText === null) return;
-    msg.content = newText;
-    renderMessages();
-    refreshPinnedBar();
-  }
+  sendBtn.addEventListener("click", () => {
+    if (!sendBtn.classList.contains("disabled")) {
+      handleSend();
+    }
+  });
 
-  if (action === "delete") {
-    if (!confirm("이 메시지를 삭제할까요?")) return;
-    messages.splice(idx, 1);
-    if (pinnedId === id) pinnedId = null;
-    renderMessages();
-    refreshPinnedBar();
-  }
-});
+  attachBtn.addEventListener("click", () => {
+    fileInput.click();
+  });
 
-// PIN 모달
-pinnedClearBtn.addEventListener("click", () => {
-  pinnedId = null;
-  refreshPinnedBar();
+  fileInput.addEventListener("change", (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    attachments = attachments.concat(files);
+    renderAttachments();
+  });
+
+  pinnedClearBtn.addEventListener("click", () => {
+    pinnedId = null;
+    saveToStorage();
+    renderPinned();
+  });
+
+  pinnedContentBtn.addEventListener("click", () => {
+    if (!pinnedId) return;
+    const msg = messages.find((m) => m.id === pinnedId);
+    if (!msg) return;
+    pinModalBody.textContent = msg.content;
+    pinModalMeta.textContent = `${msg.role === "user" ? "소원" : "부감독"} · ${msg.time}`;
+    pinModalBackdrop.classList.add("open");
+  });
+
+  pinModalClose.addEventListener("click", () => {
+    pinModalBackdrop.classList.remove("open");
+  });
+
+  pinModalBackdrop.addEventListener("click", (e) => {
+    if (e.target === pinModalBackdrop) {
+      pinModalBackdrop.classList.remove("open");
+    }
+  });
+}
+
+function init() {
+  loadFromStorage();
   renderMessages();
-});
+  renderPinned();
+  initEvents();
+}
 
-pinnedContentBtn.addEventListener("click", () => {
-  if (!pinnedId) return;
-  const msg = messages.find((m) => m.id === pinnedId);
-  if (!msg) return;
-  pinModalBody.textContent = msg.content;
-  pinModalMeta.textContent = `${msg.role === "user" ? "소원" : "부감독"} · ${
-    msg.time || ""
-  }`;
-  pinModalBackdrop.classList.add("visible");
-});
-
-pinModalClose.addEventListener("click", () => {
-  pinModalBackdrop.classList.remove("visible");
-});
-
-pinModalBackdrop.addEventListener("click", (e) => {
-  if (e.target === pinModalBackdrop) {
-    pinModalBackdrop.classList.remove("visible");
-  }
-});
-
-// 초기 더미 메시지
-addMessage("assistant", "다시 연결 완료. 지금부터는 이 창이 소원 전용 대기실이야.");
-addMessage("user", "좋아. 오늘은 감정 말고 구조부터 같이 봐보자.");
-addMessage(
-  "assistant",
-  "오케이. 지금 화면 기준으로, 필요한 기능부터 하나씩 박아 나가면 된다."
-);
+document.addEventListener("DOMContentLoaded", init);
