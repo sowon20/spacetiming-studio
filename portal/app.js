@@ -20,7 +20,7 @@ const pinModalMeta = document.getElementById("pin-modal-meta");
 const pinModalClose = document.getElementById("pin-modal-close");
 const heroMeta = document.getElementById("hero-meta");
 
-const DIRECTOR_API_URL = "http://192.168.0.50:8897/chat";
+const DIRECTOR_API_URL = "/api/chat";
 
 function nowTimeString() {
   const d = new Date();
