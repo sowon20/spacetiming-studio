@@ -52,18 +52,6 @@ class ChatResponse(BaseModel):
     reply: str
 
 
-def call_model(system_prompt: str) -> str:
-    """실제 LLM 호출 자리.
-
-    TODO:
-    - 여기 안에 네가 이미 쓰고 있는 Gemini Flash / GPT 호출 코드를 붙이면 된다.
-    - system_prompt를 system 메시지로 넣고, user 메시지는 CURRENT_INPUT 섹션 내용으로만 처리하는 설계를 추천.
-    현재는 테스트를 위해 단순 에코 스타일로만 구현해둔다.
-    """
-    # 여기는 임시 응답. 실제 서비스에서 반드시 교체해야 함.
-    return "부감독 테스트 응답: 지금은 엔진 연결 전 상태야.\n\n(System prompt 일부)\n" + system_prompt[:400]
-
-
 @app.post("/chat", response_model=ChatResponse)
 async def chat(req: ChatRequest) -> ChatResponse:
     if not req.messages:
@@ -77,7 +65,8 @@ async def chat(req: ChatRequest) -> ChatResponse:
     user_input = last.content
 
     # recent_context 로드 및 업데이트
-    ctx = RecentContext.load()
+    ctx = RecentContext()
+    ctx.load()
     for m in req.messages:
         ctx.add(m.role, m.content)
     ctx.save()
