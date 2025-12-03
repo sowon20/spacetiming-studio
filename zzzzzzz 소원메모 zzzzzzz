@@ -1,3 +1,9 @@
+.env 라즈베리로 옮기기 
+scp "/Users/sowon/시공간 스튜디오/spacetiming-studio/.env" \
+
+
+
+
 	•	대화 중에 “이건 두고두고 쓸 것 같다” → timeline/json or soul
 	•	세계관/정체성/관계 정의 → soul
 	•	그냥 흐름·잡담·작업 로그 → portal_history jsonl (자동)
