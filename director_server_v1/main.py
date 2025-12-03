@@ -72,7 +72,7 @@ async def chat(req: ChatRequest) -> ChatResponse:
     ctx.save()
 
     # 프롬프트 조립용 recent 리스트 (이미 의미 턴 기준 필터링됨)
-    recent_for_prompt = ctx.extract_for_prompt()
+    recent_for_prompt = ctx.to_list()
 
     system_prompt = assemble_director_prompt(
         recent_messages=recent_for_prompt,
