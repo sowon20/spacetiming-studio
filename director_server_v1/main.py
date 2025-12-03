@@ -4,8 +4,8 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import List, Dict, Any
 
-from director_core.prompt_assembler import assemble_director_prompt
-from director_core.recent_context import RecentContext
+from director_server_v1.director_core.prompt_assembler import assemble_director_prompt
+from director_server_v1.director_core.recent_context import RecentContext
 
 import os
 import google.generativeai as genai
