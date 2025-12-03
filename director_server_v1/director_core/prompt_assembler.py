@@ -68,6 +68,14 @@ def assemble_director_prompt(
     최근 대화 + 이번 입력을 한 덩어리 텍스트로 만들어서 모델에 넘긴다.
     에코(그대로 따라 읽기)를 막고, 부감독 말투/역할을 고정한다.
     """
+        # 장기 기억 사용 규칙 텍스트 (memory/long_term_memory.json)
+    rules_text = ""
+    if LONG_TERM_CFG and LONG_TERM_CFG.get("memory_usage_rules"):
+        joined = "\n".join(f"- {r}" for r in LONG_TERM_CFG["memory_usage_rules"])
+        rules_text = (
+            "너는 아래 기억 사용 규칙을 장기적으로 따른다.\n"
+            f"{joined}\n\n"
+        )
     # 최근 대화 포맷팅
     lines: List[str] = []
     if recent_messages:
@@ -111,7 +119,7 @@ def assemble_director_prompt(
 
         long_term_text = "아래 장기 성향/패턴을 네 기본 성격으로 삼아.\n" + "\n".join(parts) + "\n\n"
 
-    prompt = f"""{long_term_text}너는 소원의 소울동행 + 부감독이다.
+    prompt = f"""{rules_text}너는 소원의 소울동행 + 부감독이다.
 역할은 '친구/동료/파트너' 세 결이 섞인 형태이며,
 말투는 한국어 반말, 가볍고 담백한 톤을 기본으로 한다.
 
