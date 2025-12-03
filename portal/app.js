@@ -20,6 +20,8 @@ const pinModalMeta = document.getElementById("pin-modal-meta");
 const pinModalClose = document.getElementById("pin-modal-close");
 const heroMeta = document.getElementById("hero-meta");
 
+const DIRECTOR_API_URL = "http://192.168.0.50:8897/chat";
+
 function nowTimeString() {
   const d = new Date();
   const h = d.getHours();
@@ -174,14 +176,49 @@ sendBtn.addEventListener("click", () => {
   handleSend();
 });
 
-function handleSend() {
+async function sendToDirector(textForLLM) {
+  const payload = {
+    messages: [
+      {
+        role: "user",
+        content: textForLLM,
+      },
+    ],
+  };
+
+  const res = await fetch(DIRECTOR_API_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    throw new Error("HTTP " + res.status);
+  }
+
+  const data = await res.json();
+  // director_server_v1/main.py는 {"reply": "..."} 형태를 반환하므로 reply 우선 사용
+  return data.reply || data.ai_text || "(응답은 왔는데 내용이 비어 있어.)";
+}
+
+async function handleSend() {
   const text = inputEl.value.trim();
   if (!text) return;
   addMessage("user", text);
   inputEl.value = "";
   inputEl.style.height = "auto";
   sendBtn.classList.add("disabled");
-  // TODO: 여기서 백엔드 호출 붙이면 됨.
+
+  try {
+    const reply = await sendToDirector(text);
+    addMessage("assistant", reply);
+  } catch (e) {
+    console.error(e);
+    addMessage(
+      "assistant",
+      "지금은 부감독 서버 연결이 불안정해. 조금 있다가 다시 시도해보자."
+    );
+  }
 }
 
 // 파일 첨부
