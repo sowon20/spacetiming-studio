@@ -1,24 +1,49 @@
 <!DOCTYPE html>
 <html lang="ko">
+
 <head>
   <meta charset="UTF-8" />
   <title>부감독 채팅</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+
+  <!-- PWA & iOS Meta Tags -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="부감독" />
+  <meta name="theme-color" content="#FAF8F5" />
+  <meta name="mobile-web-app-capable" content="yes" />
+
   <link rel="stylesheet" href="style.css" />
 </head>
+
 <body class="mode-mobile">
   <div class="app-shell">
     <header class="top-region">
       <div class="top-bar">
-        <div class="top-bar-title">SPACETIME DIRECTOR</div>
-        <div class="top-bar-main">
-          <div class="top-bar-main-left">
-            <span class="top-bar-dot"></span>
-            <span>부감독 · 라이브 세션</span>
+        <div class="top-bar-header">
+          <div class="top-bar-title">SPACETIME DIRECTOR</div>
+          <div class="top-bar-status">
+            <span class="status-badge online">
+              <span class="status-dot"></span>
+              ONLINE
+            </span>
           </div>
-          <div class="top-bar-main-right" id="session-meta">
-            오늘 대화 로그 0개
+        </div>
+
+        <div class="top-bar-mode">
+          <span class="mode-label">MODE</span>
+          <span class="mode-value">부감독 · Chat</span>
+        </div>
+
+        <div class="top-bar-stats">
+          <div class="stat-row">
+            <div class="stat-label" id="session-meta">오늘 대화 로그 0개</div>
+            <div class="stat-value">0%</div>
           </div>
+          <div class="stat-bar">
+            <div class="stat-bar-fill" style="width: 0%"></div>
+          </div>
+          <div class="stat-subtext">API Usage: 0 / 10,000 tokens</div>
         </div>
       </div>
 
@@ -38,13 +63,14 @@
 
     <footer class="composer">
       <div id="attachments-strip" class="attachments-strip"></div>
-      <div class="composer-inner">
-        <button id="attach-btn" class="composer-button" title="파일 첨부">＋</button>
-        <div class="composer-textarea-wrap">
-          <textarea id="composer-input" class="composer-textarea"
-            rows="1" placeholder="부감독에게 메시지를 입력하세요"></textarea>
+      <div class="composer-main">
+        <button id="attach-btn" class="attach-button" title="파일 첨부">+</button>
+        <div class="composer-inner">
+          <div class="composer-textarea-wrap">
+            <textarea id="composer-input" class="composer-textarea" rows="1" placeholder="부감독에게 메시지를 입력하세요"></textarea>
+          </div>
+          <button id="send-btn" class="send-button disabled" title="전송">↑</button>
         </div>
-        <button id="send-btn" class="composer-button send-button disabled" title="전송">➤</button>
       </div>
       <input id="file-input" type="file" multiple />
     </footer>
@@ -63,4 +89,5 @@
 
   <script src="app.js"></script>
 </body>
+
 </html>
