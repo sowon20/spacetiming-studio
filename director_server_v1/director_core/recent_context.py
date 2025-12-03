@@ -4,8 +4,8 @@ import json
 from pathlib import Path
 from typing import List, Dict, Any
 
-
-"""부감독용 최근 대화 맥락 엔진 (v1).
+"""
+부감독용 최근 대화 맥락 엔진 (v1).
 
 main.py 에서:
 
@@ -14,12 +14,12 @@ main.py 에서:
 로 import 해서 사용한다.
 
 역할:
-- 최근 대화  N 턴을 JSON 파일에 저장
+- 최근 대화 N턴을 JSON 파일에 저장
 - LLM 호출 전에 recent_messages 리스트로 건네주기
 """
 
-
-BASE_DIR = Path(__file__).resolve().parent.parent  # project root (spacetiming-studio)
+# project root = spacetiming-studio
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
 STORAGE_DIR = BASE_DIR / "director_server_v1" / "storage"
 STORAGE_PATH = STORAGE_DIR / "recent_context.json"
 
