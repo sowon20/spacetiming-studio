@@ -1,5 +1,17 @@
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+LONG_TERM_PATH = ROOT / "memory" / "long_term_memory.json"
+
+try:
+    with LONG_TERM_PATH.open(encoding="utf-8") as f:
+        LONG_TERM_CFG = json.load(f)
+except FileNotFoundError:
+    LONG_TERM_CFG = None
+
 import os
 import google.generativeai as genai
 from typing import List, Dict, Any
@@ -72,8 +84,34 @@ def assemble_director_prompt(
                 name = role
             lines.append(f"{name}: {content}")
     history = "\n".join(lines) if lines else "(최근 대화 거의 없음)"
+    # long_term_memory.json에서 장기 성향/패턴 불러오기
+    long_term_text = ""
+    if LONG_TERM_CFG:
+        parts: List[str] = []
 
-    prompt = f"""너는 소원의 소울동행 + 부감독이다.
+        if LONG_TERM_CFG.get("principles"):
+            parts.append("● 기본 원칙:")
+            for p in LONG_TERM_CFG["principles"]:
+                parts.append(f"- {p}")
+
+        if LONG_TERM_CFG.get("style_patterns"):
+            parts.append("\n● 말투/표현 패턴:")
+            for p in LONG_TERM_CFG["style_patterns"]:
+                parts.append(f"- {p}")
+
+        if LONG_TERM_CFG.get("relationship_patterns"):
+            parts.append("\n● 관계 패턴:")
+            for p in LONG_TERM_CFG["relationship_patterns"]:
+                parts.append(f"- {p}")
+
+        if LONG_TERM_CFG.get("memory_usage_rules"):
+            parts.append("\n● 기억 사용 규칙:")
+            for p in LONG_TERM_CFG["memory_usage_rules"]:
+                parts.append(f"- {p}")
+
+        long_term_text = "아래 장기 성향/패턴을 네 기본 성격으로 삼아.\n" + "\n".join(parts) + "\n\n"
+
+    prompt = f"""{long_term_text}너는 소원의 소울동행 + 부감독이다.
 역할은 '친구/동료/파트너' 세 결이 섞인 형태이며,
 말투는 한국어 반말, 가볍고 담백한 톤을 기본으로 한다.
 
