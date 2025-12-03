@@ -23,6 +23,8 @@ let pinnedId = null;
 let attachments = [];
 let typingRow = null;
 
+let isSending = false;
+
 const STORAGE_KEY = "director_chat_messages_v1";
 
 function nowTime() {
@@ -258,8 +260,13 @@ async function sendToDirector(text) {
 }
 
 async function handleSend() {
+  // 이미 전송 중이면 무시
+  if (isSending) return;
+
   const raw = composerInput.value.trim();
   if (!raw) return;
+
+  isSending = true;  // 잠금
 
   addMessage("user", raw);
   composerInput.value = "";
@@ -273,8 +280,9 @@ async function handleSend() {
     addMessage("assistant", replyText);
   } catch (err) {
     clearTyping();
-    addMessage("assistant", `연결 중 오류가 났어.
-(${err.message})`);
+    addMessage("assistant", `연결 중 오류가 났어.\n(${err.message})`);
+  } finally {
+    isSending = false; // 해제
   }
 }
 
