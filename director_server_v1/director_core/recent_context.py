@@ -84,3 +84,13 @@ class RecentContext:
     def to_list(self) -> List[Dict[str, Any]]:
         """LLM 프롬프트용 리스트 반환."""
         return list(self.messages)
+
+    def extract_for_prompt(self, max_turns: int | None = None) -> List[Dict[str, Any]]:
+        """프롬프트 조립용으로 최근 메시지를 슬라이스해서 반환한다.
+
+        max_turns가 None이거나 현재 길이보다 크면 전체를 반환하고,
+        그렇지 않으면 마지막 max_turns개만 반환한다.
+        """
+        if max_turns is None or max_turns >= len(self.messages):
+            return list(self.messages)
+        return self.messages[-max_turns:]
