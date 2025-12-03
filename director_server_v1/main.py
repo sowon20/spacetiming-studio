@@ -52,42 +52,40 @@ class ChatResponse(BaseModel):
     reply: str
 
 
-@app.post("/chat", response_model=ChatResponse)
-async def chat(req: ChatRequest) -> ChatResponse:
-    if not req.messages:
-        raise HTTPException(status_code=400, detail="messages 비어 있음")
-
-    # 최신 메시지 = 이번 턴 사용자 입력이라고 가정
-    last = req.messages[-1]
-    if last.role not in ("user", "소원"):
-        raise HTTPException(status_code=400, detail="마지막 메시지는 user여야 함")
-
-    user_input = last.content
-
-    # recent_context 로드 및 업데이트
+@app.post("/chat")
+async def chat(req: "ChatRequest"):
+    """
+    director_core recent_context + 부감독 프롬프트 + Gemini 호출
+    """
+    # 1) 최근 대화 컨텍스트 로드/업데이트
     ctx = RecentContext()
     ctx.load()
+
     for m in req.messages:
         ctx.add(m.role, m.content)
+
     ctx.save()
 
-    # 프롬프트 조립용 recent 리스트 (이미 의미 턴 기준 필터링됨)
-    recent_for_prompt = ctx.to_list()
+    # 2) 프롬프트에 넣을 최근 대화 뽑기
+    recent_for_prompt = ctx.extract_for_prompt(max_turns=32)
+    user_input = req.messages[-1].content if req.messages else ""
 
-    system_prompt = assemble_director_prompt(
+    # 3) 부감독 인격 프롬프트 조립
+    final_prompt = assemble_director_prompt(
         recent_messages=recent_for_prompt,
         user_input=user_input,
-        max_recent=16,
+        max_recent=32,
     )
 
-    reply_text = call_model(system_prompt)
+    # 4) Gemini 호출
+    try:
+        model = genai.GenerativeModel(GEMINI_MODEL)
+        resp = model.generate_content(final_prompt)
+        reply_text = resp.text.strip() if hasattr(resp, "text") else str(resp)
+    except Exception as e:
+        reply_text = f"부감독 뇌 연결 중 오류가 있었어. (세부: {e})"
 
-    # 부감독 응답도 컨텍스트에 추가
-    ctx.add("assistant", reply_text)
-    ctx.save()
-
-    return ChatResponse(reply=reply_text)
-
+    return {"reply": reply_text}
 
 @app.get("/health")
 async def health() -> Dict[str, Any]:
