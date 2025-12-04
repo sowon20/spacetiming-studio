@@ -12,37 +12,41 @@
 }
 
 :root {
-  /* Warm, low-saturation light theme */
-  --bg-shell: #f3eee7;
-  --bg-shell-strong: #e4ddd0;
-  --bg-shell-soft: #f8f3ec;
+  /* Enhanced Color Palette for Strong Contrast */
+  --bg-base: #F5F1ED;
+  --dashboard-bg: #2C2C2E;
+  --dashboard-glass: rgba(44, 44, 46, 0.85);
+  --chat-glass: rgba(255, 255, 255, 0.65);
 
-  --card-surface: #fdfaf6;
-  --card-elevated: #ffffff;
-  --card-muted: #ece4d9;
+  --glass-border-dark: rgba(255, 255, 255, 0.15);
+  --glass-border-light: rgba(0, 0, 0, 0.08);
 
-  --text-primary: #292524;
-  --text-secondary: #6b5f58;
-  --text-tertiary: #a39a92;
+  --text-primary: #1F2937;
+  --text-secondary: #6B7280;
+  --text-tertiary: #9CA3AF;
+  --text-on-dark: #FFFFFF;
+  --text-on-dark-secondary: rgba(255, 255, 255, 0.7);
+  --text-on-dark-tertiary: rgba(255, 255, 255, 0.5);
 
-  --accent-main: #7a91b5;     /* soft warm blue */
-  --accent-soft: #d7b59c;     /* sand/terracotta */
-  --accent-success: #7da58e;  /* moss green */
-  --accent-badge: #e1c8aa;
+  /* Accent Colors */
+  --accent-user: #5B8DEE;
+  --accent-ai: #E8E8ED;
+  --accent-online: #34D399;
+  --accent-warning: #F59E0B;
+  --accent-purple: #8B5CF6;
 
-  --border-subtle: rgba(148, 131, 113, 0.28);
-  --border-strong: rgba(87, 74, 63, 0.6);
+  --border-subtle: rgba(0, 0, 0, 0.06);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.15);
 
-  --shadow-soft-sm: 0 8px 18px rgba(15, 23, 42, 0.10);
-  --shadow-soft-md: 0 18px 40px rgba(15, 23, 42, 0.13);
-  --shadow-soft-lg: 0 28px 70px rgba(15, 23, 42, 0.16);
+  /* Typography */
+  --font-primary: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', system-ui, sans-serif;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
 
-  --radius-lg: 26px;
-  --radius-md: 18px;
-  --radius-sm: 12px;
-
-  --font-primary: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
-
+  /* Spacing */
   --safe-top: env(safe-area-inset-top);
   --safe-bottom: env(safe-area-inset-bottom);
   --safe-left: env(safe-area-inset-left);
@@ -50,13 +54,17 @@
 }
 
 
-
 body {
   font-family: var(--font-primary);
   background:
-    radial-gradient(circle at 0% 0%, rgba(255, 255, 255, 0.85) 0%, transparent 55%),
-    radial-gradient(circle at 100% 100%, rgba(235, 211, 186, 0.70) 0%, transparent 55%),
-    linear-gradient(180deg, #f4efe8 0%, #efe6da 42%, #e7ddcf 100%);
+    linear-gradient(135deg, rgba(139, 92, 246, 0.08) 0%, transparent 50%),
+    linear-gradient(225deg, rgba(236, 72, 153, 0.08) 0%, transparent 50%),
+    repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 0, 0, 0.02) 2px, rgba(0, 0, 0, 0.02) 4px),
+    repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(0, 0, 0, 0.02) 2px, rgba(0, 0, 0, 0.02) 4px),
+    radial-gradient(circle at 20% 30%, rgba(251, 207, 232, 0.15) 0%, transparent 50%),
+    radial-gradient(circle at 80% 70%, rgba(196, 181, 253, 0.15) 0%, transparent 50%),
+    linear-gradient(180deg, #F5F1ED 0%, #EAE3DB 100%);
+  background-attachment: fixed;
   color: var(--text-primary);
   height: 100vh;
   overflow: hidden;
@@ -65,23 +73,21 @@ body {
   padding: var(--safe-top) var(--safe-right) var(--safe-bottom) var(--safe-left);
 }
 
-
 /* Strong Background Pattern for Glass Visibility */
 body::before {
   content: '';
   position: fixed;
   inset: 0;
   background-image:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.6) 0%, transparent 60%),
-    radial-gradient(circle at 10% 20%, rgba(255, 255, 255, 0.4) 0%, transparent 55%),
-    radial-gradient(circle at 85% 80%, rgba(230, 200, 170, 0.28) 0%, transparent 55%);
-  background-size: 100% 100%, 900px 900px, 900px 900px;
+    url('data:image/svg+xml,%3Csvg width="60" height="60" xmlns="http://www.w3.org/2000/svg"%3E%3Cpath d="M30 0L60 30L30 60L0 30Z" fill="%23000" opacity="0.02"/%3E%3C/svg%3E'),
+    radial-gradient(circle at 25% 25%, rgba(139, 92, 246, 0.1) 0%, transparent 30%),
+    radial-gradient(circle at 75% 75%, rgba(236, 72, 153, 0.1) 0%, transparent 30%);
+  background-size: 60px 60px, 800px 800px, 800px 800px;
   background-position: 0 0, 0 0, 0 0;
   pointer-events: none;
   z-index: 0;
-  opacity: 0.85;
+  opacity: 0.8;
 }
-
 
 /* ============================================
    App Shell Structure
@@ -919,78 +925,28 @@ body::before {
   display: none !important;
 }
 
-/* Warm dashboard card */
-.top-region {
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  padding: 14px 18px 10px;
-  background:
-    linear-gradient(180deg, rgba(33, 33, 37, 0.96) 0%, rgba(24, 24, 27, 0.98) 40%, rgba(24, 24, 27, 1) 100%);
-  color: #f5f5f4;
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-soft-md);
-  border: 1px solid rgba(255, 255, 255, 0.04);
+/* Right-aligned header meta for user messages */
+.message-row.user .msg-header {
+  justify-content: flex-end;
+  padding-right: 6px;
 }
 
-.main {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  gap: 18px;
-  background: transparent;
+.message-row.user .msg-author {
+  order: 2;
+  text-align: right;
 }
 
-
-/* Chat surface */
-.chat-main {
-  background: rgba(252, 248, 241, 0.9);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-soft-md);
-  border: 1px solid rgba(148, 131, 113, 0.22);
+.message-row.user .msg-time {
+  order: 1;
 }
 
-.chat-scroll-region {
-  background: linear-gradient(180deg, rgba(252, 248, 241, 0.96), rgba(249, 242, 233, 0.96));
+.message-row.user .msg-actions {
+  order: 0;
 }
 
-/* Assistant bubble – light cream with warm tint */
-.message-row.assistant .msg-bubble {
-  background:
-    radial-gradient(circle at 0% 0%, rgba(245, 222, 200, 0.32), transparent 55%),
-    #fdf7ef;
-  border-radius: 22px;
-  border: 1px solid rgba(206, 187, 163, 0.6);
-  color: #423632;
-  box-shadow: 0 10px 28px rgba(148, 131, 113, 0.30);
-}
-
-/* User bubble – warm grey capsule */
-.message-row.user .msg-bubble {
-  background: #7d6d61;
-  color: #fdfaf6;
-  border-radius: 22px;
-  border-bottom-right-radius: 8px;
-  box-shadow: 0 10px 28px rgba(87, 74, 63, 0.35);
-}
-
-/* Composer */
-.composer-shell {
-  background: rgba(253, 250, 246, 0.95);
-  border-radius: 999px;
-  box-shadow: 0 14px 40px rgba(15, 23, 42, 0.16);
-  border: 1px solid rgba(209, 192, 172, 0.9);
-}
-
-.composer-input {
-  background: transparent;
-  color: var(--text-primary);
-}
-
-.composer-input::placeholder {
-  color: rgba(120, 113, 108, 0.7);
-}
-
-.attachments-strip {
-  background: transparent;
+/* Optionally hide inline header actions on mobile to keep it clean */
+@media (max-width: 768px) {
+  .message-row.user .msg-actions {
+    display: none;
+  }
 }
