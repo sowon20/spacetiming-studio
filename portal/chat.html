@@ -674,6 +674,13 @@
     const attachStrip = document.getElementById("attachStrip");
     const attachStripInner = document.getElementById("attachStripInner");
 
+    // 입력창 포커스 시 최근 메시지가 항상 보이도록 보정
+    inputEl.addEventListener("focus", () => {
+      // 키보드가 완전히 올라온 뒤에도 한 번 더 맞춰주기 위해 두 번 호출
+      scrollToBottom();
+      setTimeout(scrollToBottom, 200);
+    });
+
 
     function scrollToBottom() {
       const messages = document.getElementById("messages");
