@@ -218,8 +218,17 @@ function renderAttachments() {
     const pill = document.createElement("div");
     pill.className = "attachment-pill";
 
-    const nameSpan = document.createElement("span");
-    nameSpan.textContent = f.name;
+    // 이미지 파일이면 썸네일 미리보기, 그 외에는 파일 이름 표시
+    if (f.type && f.type.startsWith("image/")) {
+      const img = document.createElement("img");
+      img.src = URL.createObjectURL(f);
+      img.alt = f.name || "image";
+      pill.appendChild(img);
+    } else {
+      const nameSpan = document.createElement("span");
+      nameSpan.textContent = f.name;
+      pill.appendChild(nameSpan);
+    }
 
     const removeBtn = document.createElement("button");
     removeBtn.className = "attachment-remove";
@@ -229,7 +238,7 @@ function renderAttachments() {
       renderAttachments();
     };
 
-    pill.append(nameSpan, removeBtn);
+    pill.appendChild(removeBtn);
     attachmentsStrip.appendChild(pill);
   });
 }
