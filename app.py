@@ -99,3 +99,14 @@ async def chat(req: ChatRequest):
         )
 
     return ChatResponse(reply=reply)
+
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
+
+# 정적 파일(스타일/JS) 서빙
+app.mount("/static", StaticFiles(directory="portal", html=False), name="static")
+
+# chat.html 직접 서빙
+@app.get("/chat.html")
+async def chat_page():
+    return FileResponse("portal/chat.html")
