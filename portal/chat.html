@@ -29,8 +29,9 @@
     html, body {
       margin: 0;
       padding: 0;
-      height: 100%;
-      overflow: hidden;
+      min-height: 100%;
+      overflow-x: hidden;
+      overflow-y: auto;
       font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
       background: var(--bg-cream);
       color: var(--text-main);
@@ -673,23 +674,6 @@
     const attachStrip = document.getElementById("attachStrip");
     const attachStripInner = document.getElementById("attachStripInner");
 
-    // iOS에서 키보드가 올라올 때 화면 전체가 위로 밀리는 현상 보정
-    function keepViewportTop() {
-      window.scrollTo(0, 0);
-    }
-
-    inputEl.addEventListener("focus", () => {
-      // 포커스 직후와 약간 뒤에 한 번 더 호출해서 스크롤 튀는 것 최소화
-      setTimeout(keepViewportTop, 0);
-      setTimeout(keepViewportTop, 250);
-    });
-
-    window.addEventListener("scroll", () => {
-      // 입력창에 포커스가 있을 때는 항상 최상단에 고정
-      if (document.activeElement === inputEl) {
-        keepViewportTop();
-      }
-    });
 
     function scrollToBottom() {
       const messages = document.getElementById("messages");
