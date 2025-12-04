@@ -1,93 +1,286 @@
-<!DOCTYPE html>
-<html lang="ko">
-
-<head>
-  <meta charset="UTF-8" />
-  <title>부감독 채팅</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
-
-  <!-- PWA & iOS Meta Tags -->
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="부감독" />
-  <meta name="theme-color" content="#FAF8F5" />
-  <meta name="mobile-web-app-capable" content="yes" />
-
-<link rel="stylesheet" href="/static/style.css">
-</head>
-
 <body class="mode-mobile bg-forest-book">
-  <div class="app-shell">
-    <header class="top-region">
-      <div class="top-bar">
-        <div class="top-bar-header">
-          <div class="top-bar-title">SPACETIME DIRECTOR</div>
-          <div class="top-bar-status">
-            <span class="status-badge online">
-              <span class="status-dot"></span>
-              ONLINE
-            </span>
-          </div>
+  <div class="app">
+    <!-- 상단 세이지 패널 -->
+    <header class="top-panel">
+      <div class="top-panel-row">
+        <div>
+          <div class="top-title-main">SPACETIME DIRECTOR</div>
+          <div class="top-title-sub">부감독 · 개인 세션</div>
         </div>
-
-        <div class="top-bar-mode">
-          <span class="mode-label">MODE</span>
-          <span class="mode-value">부감독 · Chat</span>
-        </div>
-
-        <div class="top-bar-stats">
-          <div class="stat-row">
-            <div class="stat-label" id="session-meta">오늘 대화 로그 0개</div>
-            <div class="stat-value">0%</div>
+        <div class="top-actions">
+          <div class="status-pill">
+            <span class="status-dot"></span>
+            <span>ONLINE</span>
           </div>
-          <div class="stat-bar">
-            <div class="stat-bar-fill" style="width: 0%"></div>
-          </div>
-          <div class="stat-subtext">API Usage: 0 / 10,000 tokens</div>
+          <button class="icon-btn" type="button">
+            📞<span>Call</span>
+          </button>
         </div>
       </div>
-
-      <div id="pinned-bar" class="pinned-bar" hidden>
-        <span class="pinned-label">PIN</span>
-        <button id="pinned-content-btn" type="button">
-          <span id="pinned-summary" class="pinned-summary"></span>
-        </button>
-        <button id="pinned-clear" class="pinned-close" title="핀 해제">✕</button>
+      <div class="api-row">
+        <div class="api-label">API 사용량</div>
+        <div class="api-bar-wrap">
+          <div class="api-bar" id="apiBar"></div>
+        </div>
+        <div class="api-label" id="apiLabel">32%</div>
       </div>
     </header>
 
-    <main class="main">
-      <section id="chat-list" class="chat-section" aria-label="대화창">
-      </section>
-    </main>
+    <!-- 핀 캡슐 영역 -->
+    <section class="pin-strip">
+      <div class="pin-capsule" id="pinCapsule">
+        <div class="pin-capsule-main">
+          <div class="pin-dot"></div>
+          <div class="pin-text" id="pinText">핀 된 메시지가 여기에 요약돼요.</div>
+        </div>
+        <button class="pin-close" type="button" id="pinClearBtn">✕</button>
+      </div>
+    </section>
 
-    <footer class="composer">
-      <div id="attachments-strip" class="attachments-strip"></div>
-      <div class="composer-main">
-        <button id="attach-btn" class="attach-button" title="파일 첨부">+</button>
-        <div class="composer-inner">
-          <div class="composer-textarea-wrap">
-            <textarea id="composer-input" class="composer-textarea" rows="1" placeholder="부감독에게 메시지를 입력하세요"></textarea>
+    <!-- 메시지 영역 -->
+    <main class="messages" id="messages">
+      <div class="messages-inner" id="messagesInner">
+        <!-- 예시 메시지들 -->
+        <div class="msg-row other">
+          <div class="bubble-wrap" data-id="1">
+            <button class="bubble-menu-toggle" type="button">⋯</button>
+            <div class="bubble other">
+              부감독입니다. 오늘 작업 흐름 정리부터 갈까?
+            </div>
+            <div class="bubble-meta">21:40</div>
+            <div class="bubble-menu">
+              <button data-action="pin">핀</button>
+              <button data-action="edit">수정</button>
+              <button data-action="delete">삭제</button>
+              <button data-action="history">기록</button>
+            </div>
           </div>
-          <button id="send-btn" class="send-button disabled" title="전송">↑</button>
+        </div>
+
+        <div class="msg-row me">
+          <div class="bubble-wrap" data-id="2">
+            <button class="bubble-menu-toggle" type="button">⋯</button>
+            <div class="bubble me">
+              레이아웃만 깔끔하면 나머진 내가 채워 넣을게.
+            </div>
+            <div class="bubble-meta me">21:41</div>
+            <div class="bubble-menu">
+              <button data-action="pin">핀</button>
+              <button data-action="edit">수정</button>
+              <button data-action="delete">삭제</button>
+              <button data-action="history">기록</button>
+            </div>
+          </div>
         </div>
       </div>
-      <input id="file-input" type="file" multiple />
-    </footer>
-  </div>
+    </main>
 
-  <div id="pin-modal-backdrop" class="modal-backdrop" role="dialog" aria-modal="true">
-    <div class="modal">
-      <div class="modal-header">
-        <span>핀 된 메시지</span>
-        <button id="pin-modal-close" class="modal-close" aria-label="닫기">×</button>
+    <!-- 입력 영역 -->
+    <section class="composer">
+      <!-- 첨부 미리보기 -->
+      <div class="attach-strip" id="attachStrip">
+        <div class="attach-strip-inner" id="attachStripInner">
+          <!-- JS로 채워짐 -->
+        </div>
       </div>
-      <div id="pin-modal-body" class="modal-body"></div>
-      <div id="pin-modal-meta" class="modal-meta"></div>
-    </div>
+
+      <div class="composer-hint">
+        엔터: 전송 · Shift+Enter: 줄바꿈
+      </div>
+
+      <div class="composer-row">
+        <button class="attach-btn" type="button" id="attachBtn">＋</button>
+        <div class="input-shell">
+          <textarea
+            id="input"
+            class="input"
+            rows="1"
+            placeholder="메시지 입력…"
+          ></textarea>
+          <button class="send-btn" type="button" id="sendBtn">➤</button>
+        </div>
+      </div>
+    </section>
   </div>
 
-  <script src="/static/app.js" defer></script>
-</body>
+  <script>
+    // 아이폰 vh 대응
+    function setVh() {
+      document.documentElement.style.setProperty(
+        "--vh",
+        window.innerHeight * 0.01 + "px"
+      );
+    }
+    window.addEventListener("resize", setVh);
+    window.addEventListener("orientationchange", setVh);
+    setVh();
 
-</html>
+    const messagesInner = document.getElementById("messagesInner");
+    const pinCapsule = document.getElementById("pinCapsule");
+    const pinText = document.getElementById("pinText");
+    const pinClearBtn = document.getElementById("pinClearBtn");
+    const inputEl = document.getElementById("input");
+    const sendBtn = document.getElementById("sendBtn");
+    const attachBtn = document.getElementById("attachBtn");
+    const attachStrip = document.getElementById("attachStrip");
+    const attachStripInner = document.getElementById("attachStripInner");
+
+    function scrollToBottom() {
+      const messages = document.getElementById("messages");
+      messages.scrollTop = messages.scrollHeight;
+    }
+
+    scrollToBottom();
+
+    // 엔터로 전송, Shift+Enter 줄바꿈
+    inputEl.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+
+    sendBtn.addEventListener("click", sendMessage);
+
+    function sendMessage() {
+      const text = inputEl.value.trim();
+      if (!text) return;
+
+      const row = document.createElement("div");
+      row.className = "msg-row me";
+
+      const wrap = document.createElement("div");
+      wrap.className = "bubble-wrap";
+      wrap.dataset.id = Date.now().toString();
+
+      const toggle = document.createElement("button");
+      toggle.className = "bubble-menu-toggle";
+      toggle.type = "button";
+      toggle.textContent = "⋯";
+
+      const bubble = document.createElement("div");
+      bubble.className = "bubble me";
+      bubble.textContent = text;
+
+      const meta = document.createElement("div");
+      meta.className = "bubble-meta me";
+      const now = new Date();
+      meta.textContent =
+        String(now.getHours()).padStart(2, "0") +
+        ":" +
+        String(now.getMinutes()).padStart(2, "0");
+
+      const menu = document.createElement("div");
+      menu.className = "bubble-menu";
+      ["pin", "edit", "delete", "history"].forEach((action) => {
+        const btn = document.createElement("button");
+        btn.dataset.action = action;
+        btn.textContent =
+          action === "pin"
+            ? "핀"
+            : action === "edit"
+            ? "수정"
+            : action === "delete"
+            ? "삭제"
+            : "기록";
+        menu.appendChild(btn);
+      });
+
+      wrap.appendChild(toggle);
+      wrap.appendChild(bubble);
+      wrap.appendChild(meta);
+      wrap.appendChild(menu);
+      row.appendChild(wrap);
+      messagesInner.appendChild(row);
+
+      inputEl.value = "";
+      scrollToBottom();
+    }
+
+    // 말풍선 메뉴 토글 + 핀/삭제 등
+    messagesInner.addEventListener("click", (e) => {
+      const toggle = e.target.closest(".bubble-menu-toggle");
+      const menuBtn = e.target.closest(".bubble-menu button");
+
+      if (toggle) {
+        const wrap = toggle.closest(".bubble-wrap");
+        const menu = wrap.querySelector(".bubble-menu");
+        const allMenus = document.querySelectorAll(".bubble-menu");
+        allMenus.forEach((m) => {
+          if (m !== menu) m.classList.remove("show");
+        });
+        menu.classList.toggle("show");
+        return;
+      }
+
+      if (menuBtn) {
+        const action = menuBtn.dataset.action;
+        const wrap = menuBtn.closest(".bubble-wrap");
+        const bubbleEl = wrap.querySelector(".bubble");
+        const menu = wrap.querySelector(".bubble-menu");
+
+        if (action === "pin") {
+          const text = bubbleEl.textContent || "";
+          pinText.textContent = text;
+          pinCapsule.style.display = "flex";
+        } else if (action === "delete") {
+          wrap.closest(".msg-row").remove();
+        } else if (action === "edit") {
+          inputEl.value = bubbleEl.textContent || "";
+          inputEl.focus();
+        } else if (action === "history") {
+          // 나중에 로그/히스토리 붙일 자리
+          console.log("history clicked for", wrap.dataset.id);
+        }
+
+        menu.classList.remove("show");
+      }
+    });
+
+    pinClearBtn.addEventListener("click", () => {
+      pinCapsule.style.display = "none";
+      pinText.textContent = "";
+    });
+
+    // 첨부 프리뷰 데모
+    let demoAttach = 0;
+    attachBtn.addEventListener("click", () => {
+      // 실제 구현에선 파일 선택 붙이면 됨. 지금은 데모용.
+      demoAttach++;
+      attachStrip.style.display = "block";
+      const pill = document.createElement("div");
+      pill.className = "attach-pill";
+
+      const title = document.createElement("div");
+      title.className = "attach-title";
+      title.textContent = `파일-${demoAttach}.png`;
+
+      const meta = document.createElement("div");
+      meta.className = "attach-meta";
+      meta.innerHTML = `<span>이미지</span>`;
+      const remove = document.createElement("button");
+      remove.className = "attach-remove";
+      remove.type = "button";
+      remove.textContent = "삭제";
+      remove.addEventListener("click", () => {
+        pill.remove();
+        if (!attachStripInner.children.length) {
+          attachStrip.style.display = "none";
+        }
+      });
+      meta.appendChild(remove);
+
+      pill.appendChild(title);
+      pill.appendChild(meta);
+      attachStripInner.appendChild(pill);
+    });
+
+    // 바깥 클릭 시 메뉴 닫기
+    document.addEventListener("click", (e) => {
+      if (e.target.closest(".bubble-wrap")) return;
+      document
+        .querySelectorAll(".bubble-menu.show")
+        .forEach((m) => m.classList.remove("show"));
+    });
+  </script>
+</body>

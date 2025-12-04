@@ -348,39 +348,11 @@ function initEvents() {
   });
 }
 
-async function loadInitialMessages() {
-  // 1) 서버에서 최근 대화 불러오기 시도
-  try {
-    const resp = await fetch("/api/history?limit=400", { method: "GET" });
-    if (resp.ok) {
-      const data = await resp.json();
-      if (Array.isArray(data) && data.length > 0) {
-        messages = data.map((item) => ({
-          id: item.id || `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-          role: item.role === "assistant" ? "assistant" : "user",
-          content: item.content || "",
-          time: item.time || ""
-        }));
-        // 서버 기준 상태를 로컬에도 저장 (새 기기에서도 동일한 히스토리)
-        saveToStorage();
-        return;
-      }
-    }
-  } catch (e) {
-    // 서버 히스토리 불러오기 실패 시, 로컬스토리지로 폴백
-  }
-
-  // 2) 폴백: 기존 로컬스토리지
+function init() {
   loadFromStorage();
-}
-
-async function init() {
-  await loadInitialMessages();
   renderMessages();
   renderPinned();
   initEvents();
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-  init();
-});
+document.addEventListener("DOMContentLoaded", init);
