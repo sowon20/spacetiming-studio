@@ -218,17 +218,8 @@ function renderAttachments() {
     const pill = document.createElement("div");
     pill.className = "attachment-pill";
 
-    // 이미지 파일이면 썸네일, 아니면 파일 이름만
-    if (f.type && f.type.startsWith("image/")) {
-      const img = document.createElement("img");
-      img.src = URL.createObjectURL(f);
-      img.alt = f.name || "image";
-      pill.appendChild(img);
-    } else {
-      const nameSpan = document.createElement("span");
-      nameSpan.textContent = f.name;
-      pill.appendChild(nameSpan);
-    }
+    const nameSpan = document.createElement("span");
+    nameSpan.textContent = f.name;
 
     const removeBtn = document.createElement("button");
     removeBtn.className = "attachment-remove";
@@ -238,7 +229,7 @@ function renderAttachments() {
       renderAttachments();
     };
 
-    pill.appendChild(removeBtn);
+    pill.append(nameSpan, removeBtn);
     attachmentsStrip.appendChild(pill);
   });
 }
@@ -357,11 +348,39 @@ function initEvents() {
   });
 }
 
-function init() {
+async function loadInitialMessages() {
+  // 1) 서버에서 최근 대화 불러오기 시도
+  try {
+    const resp = await fetch("/api/history?limit=80", { method: "GET" });
+    if (resp.ok) {
+      const data = await resp.json();
+      if (Array.isArray(data) && data.length > 0) {
+        messages = data.map((item) => ({
+          id: item.id || `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+          role: item.role === "assistant" ? "assistant" : "user",
+          content: item.content || "",
+          time: item.time || ""
+        }));
+        // 서버 기준 상태를 로컬에도 저장 (새 기기에서도 동일한 히스토리)
+        saveToStorage();
+        return;
+      }
+    }
+  } catch (e) {
+    // 서버 히스토리 불러오기 실패 시, 로컬스토리지로 폴백
+  }
+
+  // 2) 폴백: 기존 로컬스토리지
   loadFromStorage();
+}
+
+async function init() {
+  await loadInitialMessages();
   renderMessages();
   renderPinned();
   initEvents();
 }
 
-document.addEventListener("DOMContentLoaded", init);
+document.addEventListener("DOMContentLoaded", () => {
+  init();
+});

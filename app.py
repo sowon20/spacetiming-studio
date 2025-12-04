@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import json
 import requests
 from typing import List
 
@@ -29,6 +30,64 @@ class ChatResponse(BaseModel):
     reply: str
 
 
+class HistoryItem(BaseModel):
+    id: str
+    role: str
+    content: str
+    time: str
+
+
+HISTORY_FILES = [
+    "portal_history/sowon.chat.jsonl",
+    "portal_history/sowon.chat.mac.jsonl",
+]
+
+
+def _load_history(limit: int = 80) -> List[HistoryItem]:
+    items: List[HistoryItem] = []
+
+    for path in HISTORY_FILES:
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        data = json.loads(line)
+                    except json.JSONDecodeError:
+                        continue
+                    role = data.get("role") or "assistant"
+                    text = data.get("text") or ""
+                    ts = data.get("timestamp") or ""
+                    msg_id = data.get("id") or ts or ""
+                    # 시간 포맷에서 HH:MM만 뽑기
+                    t_display = ""
+                    if isinstance(ts, str) and ts:
+                        # 예: 2025-11-26T00:17:09
+                        parts = ts.split("T")
+                        if len(parts) == 2 and ":" in parts[1]:
+                            t_display = parts[1][:5]
+
+                    items.append(
+                        HistoryItem(
+                            id=msg_id,
+                            role=role,
+                            content=text,
+                            time=t_display,
+                        )
+                    )
+        except FileNotFoundError:
+            continue
+
+    if not items:
+        return []
+
+    # 최신 순으로 정렬 후 limit만큼 자르기
+    items_sorted = sorted(items, key=lambda x: x.id)[-limit:]
+    return items_sorted
+
+
 app = FastAPI()
 
 
@@ -40,6 +99,16 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.get("/api/history")
+async def api_history(limit: int = 80):
+    """최근 대화 히스토리를 반환 (서버 기준, 기기와 브라우저를 넘어 공통 히스토리)."""
+    try:
+        items = _load_history(limit=limit)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"history_load_error: {e}")
+    return [item.dict() for item in items]
 
 
 @app.get("/health")

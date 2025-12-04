@@ -118,6 +118,20 @@ body::before {
   -webkit-backdrop-filter: blur(24px) saturate(180%);
 }
 
+/* iOS Safari에서 키보드 올라와도 상단 박스가 화면에 고정되도록 처리 */
+@supports (-webkit-touch-callout: none) {
+  .top-region {
+    position: fixed;
+    top: env(safe-area-inset-top, 0px);
+    left: 0;
+    right: 0;
+  }
+
+  .main {
+    padding-top: 140px;
+  }
+}
+
 .top-bar {
   background: var(--dashboard-glass);
   backdrop-filter: blur(40px) saturate(180%);
