@@ -272,6 +272,7 @@
       font-size: 13px;
       line-height: 1.4;
       word-break: break-word;
+      white-space: pre-wrap; /* Shift+Enter 줄바꿈 그대로 보여주기 */
     }
 
     .bubble.other {
@@ -284,6 +285,11 @@
       background: var(--sage-mid);
       color: #f3eee5;
       border-bottom-right-radius: 6px;
+    }
+
+    .bubble.typing {
+      opacity: 0.85;
+      letter-spacing: 2px;
     }
 
 
@@ -645,6 +651,8 @@
     const attachStrip = document.getElementById("attachStrip");
     const attachStripInner = document.getElementById("attachStripInner");
 
+    const TYPING_ROW_ID = "assistant-typing";
+
     const STORAGE_KEY = "director_chat_messages_v2";
     let chatHistory = [];
 
@@ -685,6 +693,57 @@
       };
     }
 
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    // 아주 가벼운 인라인 마크다운: **bold**, *italic*, `code`
+    function renderContent(raw) {
+      if (!raw) return "";
+      let text = escapeHtml(raw);
+
+      // bold: **text**
+      text = text.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+      // italic: *text*
+      text = text.replace(/\*(.+?)\*/g, "<em>$1</em>");
+      // inline code: `code`
+      text = text.replace(/`([^`]+)`/g, "<code>$1</code>");
+
+      return text;
+    }
+
+    function showTypingIndicator() {
+      if (document.getElementById(TYPING_ROW_ID)) return;
+
+      const row = document.createElement("div");
+      row.className = "msg-row other";
+      row.id = TYPING_ROW_ID;
+
+      const wrap = document.createElement("div");
+      wrap.className = "bubble-wrap";
+
+      const bubble = document.createElement("div");
+      bubble.className = "bubble other typing";
+      bubble.textContent = "…";
+
+      wrap.appendChild(bubble);
+      row.appendChild(wrap);
+      messagesInner.appendChild(row);
+      scrollToBottom();
+    }
+
+    function hideTypingIndicator() {
+      const typingRow = document.getElementById(TYPING_ROW_ID);
+      if (typingRow) {
+        typingRow.remove();
+      }
+    }
+
     function appendMessageToDOM(msg) {
       const row = document.createElement("div");
       row.className = "msg-row " + (msg.role === "assistant" ? "other" : "me");
@@ -700,7 +759,7 @@
 
       const bubble = document.createElement("div");
       bubble.className = "bubble " + (msg.role === "assistant" ? "other" : "me");
-      bubble.textContent = msg.content;
+      bubble.innerHTML = renderContent(msg.content);
 
       const meta = document.createElement("div");
       meta.className = "bubble-meta" + (msg.role === "assistant" ? "" : " me");
@@ -782,7 +841,10 @@
       autoResizeInput();
       scrollToBottom();
 
-      // 2) 부감독에게 전달
+      // 2) 부감독 타이핑 표시
+      showTypingIndicator();
+
+      // 3) 부감독에게 전달
       try {
         const resp = await fetch("/api/chat", {
           method: "POST",
@@ -803,14 +865,18 @@
           data && typeof data.reply === "string" ? data.reply.trim() : "";
 
         if (replyText) {
+          hideTypingIndicator();
           const assistantMsg = createMessage("assistant", replyText);
           chatHistory.push(assistantMsg);
           appendMessageToDOM(assistantMsg);
           saveHistory();
           scrollToBottom();
+        } else {
+          hideTypingIndicator();
         }
       } catch (e) {
         console.error(e);
+        hideTypingIndicator();
         const errorMsg = createMessage(
           "assistant",
           "연결 중 오류가 났어. (HTTP 오류)"
