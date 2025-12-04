@@ -419,6 +419,14 @@
       background: rgba(244, 240, 234, 0.96);
       overflow: hidden;
     }
+    .attach-thumb img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
 
     .attach-remove {
       position: absolute;
@@ -617,6 +625,7 @@
 
     <!-- 입력 영역 -->
     <section class="composer">
+      <input type="file" id="fileInput" multiple style="display:none" />
       <!-- 첨부 미리보기 -->
       <div class="attach-strip" id="attachStrip">
         <div class="attach-strip-inner" id="attachStripInner">
@@ -650,11 +659,13 @@
     const attachBtn = document.getElementById("attachBtn");
     const attachStrip = document.getElementById("attachStrip");
     const attachStripInner = document.getElementById("attachStripInner");
+    const fileInput = document.getElementById("fileInput");
 
     const TYPING_ROW_ID = "assistant-typing";
 
     const STORAGE_KEY = "director_chat_messages_v2";
     let chatHistory = [];
+    let pendingAttachments = [];
 
     function loadHistory() {
       try {
@@ -715,6 +726,90 @@
       text = text.replace(/`([^`]+)`/g, "<code>$1</code>");
 
       return text;
+    }
+
+    function clearPendingAttachments() {
+      pendingAttachments.forEach((att) => {
+        if (att.url) {
+          URL.revokeObjectURL(att.url);
+        }
+      });
+      pendingAttachments = [];
+      attachStripInner.innerHTML = "";
+      attachStrip.style.display = "none";
+    }
+
+    function addFilesToAttachments(files) {
+      const list = Array.from(files || []);
+      if (!list.length) return;
+
+      list.forEach((file) => {
+        const id = Date.now().toString() + Math.random().toString(16).slice(2);
+        const url = URL.createObjectURL(file);
+        const isImage = file.type && file.type.startsWith("image/");
+
+        const att = { id, file, url, isImage };
+        pendingAttachments.push(att);
+
+        attachStrip.style.display = "block";
+
+        const pill = document.createElement("div");
+        pill.className = "attach-pill";
+        pill.dataset.id = id;
+
+        const thumb = document.createElement("div");
+        thumb.className = "attach-thumb";
+
+        if (isImage) {
+          const img = document.createElement("img");
+          img.src = url;
+          img.alt = file.name || "image";
+          thumb.appendChild(img);
+        } else {
+          const label = document.createElement("div");
+          label.style.position = "absolute";
+          label.style.inset = "0";
+          label.style.display = "flex";
+          label.style.alignItems = "center";
+          label.style.justifyContent = "center";
+          label.style.fontSize = "10px";
+          label.style.color = "var(--text-soft)";
+          const name = (file.name || "파일").split(".");
+          label.textContent = name.length > 1 ? name.pop().toUpperCase() : "FILE";
+          thumb.appendChild(label);
+        }
+
+        const remove = document.createElement("button");
+        remove.className = "attach-remove";
+        remove.type = "button";
+        remove.textContent = "✕";
+        remove.addEventListener("click", () => {
+          pill.remove();
+          pendingAttachments = pendingAttachments.filter((x) => {
+            if (x.id === id) {
+              if (x.url) URL.revokeObjectURL(x.url);
+              return false;
+            }
+            return true;
+          });
+          if (!attachStripInner.children.length) {
+            attachStrip.style.display = "none";
+          }
+        });
+        thumb.appendChild(remove);
+
+        const title = document.createElement("div");
+        title.className = "attach-title";
+        title.textContent = file.name || "첨부파일";
+
+        pill.appendChild(thumb);
+        pill.appendChild(title);
+        attachStripInner.appendChild(pill);
+      });
+
+      if (fileInput) {
+        fileInput.value = "";
+      }
     }
 
     function showTypingIndicator() {
@@ -828,11 +923,21 @@
     });
 
     async function sendMessage() {
-      const text = inputEl.value.trim();
-      if (!text) return;
+      const rawText = inputEl.value;
+      const text = rawText.trim();
+
+      if (!text && !pendingAttachments.length) return;
+
+      // 첨부파일 이름을 내용에 함께 표기 (나중에 백엔드에서 활용 가능)
+      const attachmentNames = pendingAttachments.map((att) => att.file?.name || "첨부파일");
+      let contentToSend = text;
+      if (attachmentNames.length) {
+        const label = "[첨부: " + attachmentNames.join(", ") + "]";
+        contentToSend = contentToSend ? contentToSend + "\n\n" + label : label;
+      }
 
       // 1) 내 메시지 바로 추가
-      const userMsg = createMessage("user", text);
+      const userMsg = createMessage("user", contentToSend);
       chatHistory.push(userMsg);
       appendMessageToDOM(userMsg);
       saveHistory();
@@ -840,6 +945,10 @@
       inputEl.value = "";
       autoResizeInput();
       scrollToBottom();
+
+      if (pendingAttachments.length) {
+        clearPendingAttachments();
+      }
 
       // 2) 부감독 타이핑 표시
       showTypingIndicator();
@@ -852,7 +961,7 @@
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            messages: [{ role: "user", content: text }],
+            messages: [{ role: "user", content: contentToSend }],
           }),
         });
 
@@ -937,37 +1046,21 @@
       pinText.textContent = "";
     });
 
-    // 첨부 프리뷰 데모 (나중에 실제 업로드로 교체 가능)
-    let demoAttach = 0;
+    // 첨부 파일 / 사진 선택
     attachBtn.addEventListener("click", () => {
-      demoAttach++;
-      attachStrip.style.display = "block";
-      const pill = document.createElement("div");
-      pill.className = "attach-pill";
+      if (fileInput) {
+        fileInput.click();
+      }
+    });
 
-      const thumb = document.createElement("div");
-      thumb.className = "attach-thumb";
-
-      const remove = document.createElement("button");
-      remove.className = "attach-remove";
-      remove.type = "button";
-      remove.textContent = "✕";
-      remove.addEventListener("click", () => {
-        pill.remove();
-        if (!attachStripInner.children.length) {
-          attachStrip.style.display = "none";
+    if (fileInput) {
+      fileInput.addEventListener("change", (e) => {
+        const files = e.target.files;
+        if (files && files.length) {
+          addFilesToAttachments(files);
         }
       });
-      thumb.appendChild(remove);
-
-      const title = document.createElement("div");
-      title.className = "attach-title";
-      title.textContent = `파일-${demoAttach}.png`;
-
-      pill.appendChild(thumb);
-      pill.appendChild(title);
-      attachStripInner.appendChild(pill);
-    });
+    }
 
     // 바깥 클릭 시 열려있는 말풍선 메뉴 닫기
     document.addEventListener("click", (e) => {
