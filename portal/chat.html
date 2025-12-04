@@ -29,9 +29,8 @@
     html, body {
       margin: 0;
       padding: 0;
-      min-height: 100%;
-      overflow-x: hidden;
-      overflow-y: auto;
+      height: 100%;
+      overflow: hidden;
       font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
       background: var(--bg-cream);
       color: var(--text-main);
@@ -50,7 +49,6 @@
     }
 
     .app {
-      min-height: 100vh;
       height: 100%;
       padding: 12px 12px calc(12px + env(safe-area-inset-bottom));
       display: flex;
@@ -674,19 +672,9 @@
     const attachStrip = document.getElementById("attachStrip");
     const attachStripInner = document.getElementById("attachStripInner");
 
-    // 전체 페이지와 메시지 영역을 함께 맨 아래로 스크롤
-    function scrollPageToBottom() {
-      window.scrollTo(0, document.body.scrollHeight);
-    }
-
-    // 입력창 포커스 시 최근 메시지와 입력창이 항상 보이도록 보정
+    // 입력창 포커스 시 메시지 영역만 맨 아래로 정렬
     inputEl.addEventListener("focus", () => {
       scrollToBottom();
-      scrollPageToBottom();
-      setTimeout(() => {
-        scrollToBottom();
-        scrollPageToBottom();
-      }, 200);
     });
 
 
@@ -696,7 +684,6 @@
     }
 
     scrollToBottom();
-    scrollPageToBottom();
 
     // textarea 자동 높이 조절
     function autoResizeInput() {
