@@ -43,7 +43,7 @@ HISTORY_FILES = [
 ]
 
 
-def _load_history(limit: int = 80) -> List[HistoryItem]:
+def _load_history(limit: int = 400) -> List[HistoryItem]:
     items_by_key: dict[str, HistoryItem] = {}
 
     for path in HISTORY_FILES:
@@ -102,7 +102,7 @@ app.add_middleware(
 
 
 @app.get("/api/history")
-async def api_history(limit: int = 80):
+async def api_history(limit: int = 400):
     """최근 대화 히스토리를 반환 (서버 기준, 기기와 브라우저를 넘어 공통 히스토리)."""
     try:
         items = _load_history(limit=limit)
