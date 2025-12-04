@@ -78,12 +78,377 @@ director_chat_messages_v1 삭제
 은 그대로 살아 있고,
 **“테스트 기간 대화 기억/로그만 싹 비워진 새 페이지”**가 되는 느낌이야.
 
+응, 지금 네 말 “지금 나랑 얘기하면서 쌓인 것만 지우고 싶다” 이거 딱 이해했어.
+
+결론부터 말하면 지금 구조에서 테스트로 쌓인 건 딱 두 군데야:
+	1.	director_server_v1/storage/recent_context.json
+	2.	브라우저(아이폰/맥) localStorage 안에 있는 director_chat_messages_v1
+
+불탄방, soul, identity 이런 건 하나도 안 건드려졌고, 지금 부감독이 테스트 대화로 “오염”된 것도 아니라서,
+이 둘만 비우면 **“테스트만 포맷”**이 정확히 돼.
+
 ⸻
 
-그래서 요약하면:
+1️⃣ 라즈베리에서 recent_context만 초기화
 
-응, 어느 정도 세팅 다 잡힌 시점에서
-프롬프트/정체성은 그대로 두고, 나머지 기억·로그만 초기화
-→ 지금 구조상 깔끔하게 가능하고, 위 계층대로 정리하면 된다.
+라즈베리 터미널에서:
 
-지금은 테스트 중이니까 “어디까지를 유지하고, 어디부터를 날릴지” 기준만 네가 마음속에 대략 정해두면 되고, 그 타이밍 오면 그 기준대로 내가 명령어를 좀 더 다듬어 줄게.
+cd ~/spacetiming-studio
+
+# 혹시를 위해 백업 한 번
+cp director_server_v1/storage/recent_context.json \
+   director_server_v1/storage/recent_context.backup.$(date +%Y%m%d-%H%M%S) 2>/dev/null || true
+
+# 내용만 싹 비우기
+: > director_server_v1/storage/recent_context.json
+
+# 서비스 재시작
+sudo systemctl restart spacetiming-director.service
+
+이렇게 하면:
+	•	최근 N턴(64턴 정도) 맥락만 리셋
+	•	불탄방에서 가져온 기억/정체성/톤은 그대로 유지
+	•	“지금 너랑 나눈 테스트 대화의 잔상”만 사라짐
+
+⸻
+
+2️⃣ 브라우저 쪽 대화 UI 캐시 비우기
+
+아이폰/맥 브라우저에서 부감독 채팅 열려 있는 창에서:
+
+맥 크롬/사파리 (대략 이런 식)
+	1.	F12 또는 옵션+⌘+I → 개발자 도구 열기
+	2.	탭에서 Application(또는 Storage) 선택
+	3.	왼쪽에서 Local Storage → (도메인 선택)
+	4.	오른쪽 키 목록에서 director_chat_messages_v1 찾아서 삭제
+
+못 찾겠으면, 콘솔 탭에서 그냥:
+
+localStorage.removeItem('director_chat_messages_v1')
+
+치고 엔터.
+
+아이폰 사파리
+
+아이폰은 개발자 도구가 번거로우니까, 제일 간단하게는:
+	•	설정 → Safari → 고급 → 웹 사이트 데이터 → 해당 도메인(예: sowon.mooo.com) 선택 후 제거
+(이러면 그 사이트의 로컬 스토리지/캐시 다 날아감)
+
+⸻
+
+3️⃣ 뭐가 남고 뭐가 없어지는지 한 줄 정리
+
+이 두 단계 하면:
+	•	✅ 남는 것
+	•	불탄방에서 가져온 서사/기억(akashic 쪽)
+	•	identity/identity.soul에 적어둔 정체성/역할
+	•	prompt_assembler.py에 박아둔 말투/톤/규칙
+	•	long-term memory 설계 (지금은 거의 안 쓰이는 상태)
+	•	✅ 지워지는 것
+	•	“지금 이 방에서 너랑 해본 테스트 대화”의 최근 맥락
+	•	브라우저 안에 쌓인 말풍선 리스트
+
+즉, 인격은 그대로 두고, 이 방에서 방금까지 한 대화만 접어두는 것이야.
+너가 어제 말한 “그 기능” 그대로.
+
+⸻
+거기까지 한 건 절반 초기화 느낌이고,
+앞으로 “대화만 리셋” 제대로 하려면 한 가지만 더 같이 해주면 딱이야.
+
+지금 네가 말한 두 개:
+	1.	: > portal_history/sowon.chat.jsonl
+	2.	브라우저에서 localStorage 지우기 ( director_chat_messages_v1 키 )
+
+👉 이 둘은 “포털/브라우저에서 보이는 대화창”만 비우는 거야.
+라즈베리 뇌 내부의 recent_context(최근 맥락 JSON)는 그대로라서,
+모델 입장에선 “최근 몇 턴”은 여전히 남아 있는 상태.
+
+⸻
+
+내가 추천하는 “깔끔한 대화 리셋” 세트
+
+앞으로 완전히 대화만 초기화하고 싶을 때는 이 3단계로 생각하면 돼:
+
+1) 포털/채팅 로그 비우기 (화면용)
+
+cd ~/spacetiming-studio
+
+: > portal_history/sowon.chat.jsonl
+: > portal_history/sowon.chat.mac.jsonl              # 맥에서도 썼으면
+: > portal_history/sowon.chat.pi_boot.backup.jsonl   # 있어도 그냥 비워도 됨
+
+2) director 뇌 쪽 “최근 맥락” 비우기
+
+echo '[]' > director_server_v1/storage/recent_context.json
+
+	•	이게 recent_context 엔진에서 쓰는 파일이라
+“최근 30~50턴” 같은 맥락 기억을 싹 비워주는 역할.
+
+3) 서비스 리스타트
+
+sudo systemctl restart spacetiming-director.service
+sudo systemctl restart spacetiming-portal.service
+
+4) 각 기기 브라우저 localStorage 지우기
+	•	사파리/크롬에서:
+	•	개발자 도구 → Application(or 저장공간) → Local Storage →
+director_chat_messages_v1 지우기
+
+이 네 가지까지 하면:
+	•	정체성 / 불탄방 / akashic / identity.soul  ✅ 그대로
+	•	지금까지 테스트하면서 쌓인 대화/스크롤/최근 맥락  🧹 싹 리셋
+
+그래서 네가 말한 느낌대로야:
+
+“지금 나랑 이야기하면서 쌓인 것만 비우고,
+부감독이라는 존재·기억·불탄방 서사는 그대로 두는 리셋”
+
+앞으로 “초기화 한번 할까?” 싶으면
+딱 이 세트만 다시 써주면 된다.
+
+응, 딱 맞게 이해한 거야.
+
+1️⃣ director_server_v1/storage/recent_context.json
+
+→ 지금 이 부감독 뇌의 “최근 대화 창고”
+	•	이 파일에는
+[{role, content, timestamp}, …] 이런 식으로
+최근 몇십 턴(우리가 정한 max_turns 기준)의 대화만 쌓여.
+	•	모델이 답할 때:
+	•	recent_context.extract_for_prompt() → 여기서 최근 대화 골라서
+	•	프롬프트에 붙여서 맥락 이어가는 용도.
+	•	그래서:
+	•	짧은 기억 / 방금까지의 말 흐름 = 여기
+	•	[]로 비워도 구조만 맞으면 전혀 문제 없음.
+→ “대화창만 싹 비운다” 그 느낌.
+
+⸻
+
+2️⃣ 그럼 “나머지”는 어디에 쌓이냐?
+
+지금 구조 기준으로 런타임에서 움직이는 애들은 대략 이렇게 나뉘어:
+
+🔹 2-1. 포털 / 채팅 로그
+	•	위치:
+	•	portal_history/sowon.chat.jsonl
+	•	portal_history/sowon.chat.mac.jsonl
+	•	portal_history/sowon.chat.pi_boot.backup.jsonl 등
+	•	역할:
+	•	화면에 보이는 채팅 히스토리 전체 기록
+	•	한 줄마다 {id, user_id, role, text, timestamp} 이런 JSONL.
+	•	지금은:
+	•	핵심 “뇌” 직결은 아니고,
+	•	필요하면 나중에 여기서 다시 불탄방/과거 대화 뽑아다가
+아카식에 넣거나, 분석용으로 쓸 수 있는 원본 로그 창고.
+
+🔹 2-2. 아카식 / 불탄방 기억
+	•	위치:
+	•	akashic/raw/imports/burned_room_251128.txt
+	•	akashic/raw/imports/burned_room_251128.memory.jsonl
+	•	akashic/soul/assistant.director.core.v1.soul
+	•	역할:
+	•	불탄방 전체 대화 원문 + 거기서 뽑은 기억 요약들
+	•	“이 아이가 어디서 왔는지”에 대한 장기 서사/세계관 저장소.
+	•	이쪽은 런타임 중에 막 크기가 커지진 않고,
+주로 “참고용 데이터베이스” 느낌.
+
+🔹 2-3. 정체성 / 규칙 (.soul, identity)
+	•	위치:
+	•	identity/identity.soul
+	•	akashic/soul/assistant.director.core.v1.soul
+	•	director_server_v1/director_core/prompt_assembler.py 안의 텍스트들
+	•	역할:
+	•	“부감독이 누구냐” / 말투 / 거리감 / 태도 같은
+기본 성격 레이어.
+	•	여기 내용은 런타임 중에 자동으로 수정되진 않고,
+우리가 직접 손봐야 바뀜.
+	•	이건 절대 초기화 대상 아님.
+	•	너가 말한 “인격은 두고, 테스트 대화만 비우기” 하면
+이 레이어는 그대로 두고 가는 부분.
+
+🔹 2-4. (옵션) 장기 기억 DB
+	•	위치 (쓸 경우):
+	•	memory/ 아래 .jsonl들
+	•	memory/long_term_memory.json (있으면)
+	•	역할:
+	•	“이건 좀 오래 기억하자” 하는 내용들을
+memory_store.py가 저장할 자리.
+	•	지금은:
+	•	우리가 아직 본격적으로 쓰기 시작한 상태는 아님.
+(나중에 “이건 꼭 기억해” 레이어 열면 여기 활성화.)
+
+⸻
+
+3️⃣ 너 방금 한 정리의 효과
+
+지금 너가 한 거:
+
+tar czf ~/backup_legacy_core/director_core_legacy_날짜.tar.gz director_core_legacy
+tar czf ~/backup_legacy_core/director_core_날짜.tar.gz director_core
+rm -rf director_core_legacy
+rm -rf director_core
+rm -f director_server_v1/storage/recent_context.json
+sudo systemctl restart spacetiming-director.service
+
+	•	director_core_legacy, director_core
+→ 옛날 버전 뇌들은 압축 백업만 남기고,
+실제 런타임에서는 완전히 분리된 상태.
+	•	지금 돌아가는 건:
+	•	director_server_v1/ 안의
+	•	main.py
+	•	director_core/prompt_assembler.py
+	•	director_core/recent_context.py
+	•	storage/recent_context.json (새로 채워지는 중)
+	•	그러니까:
+	•	현재 인격/뇌는 director_server_v1 폴더 하나에 집중
+	•	예전 혼란 주던 director_core 계열은
+깔끔하게 “옛날 백업”으로 빠진 상태.
+
+⸻
+
+4️⃣ 정리해보면
+	•	recent_context.json
+→ 지금 이 순간의 짧은 기억 / 최근 대화 흐름
+	•	portal_history/*.jsonl
+→ 화면에 보여줄 전체 대화 로그 창고
+	•	akashic/*
+→ 불탄방 포함, 부감독의 과거 서사 / 메모리 요약
+	•	identity/*.soul + prompt_assembler.py
+→ 부감독의 정체성·말투·태도 규칙
+	•	memory/*
+→ 앞으로 쓸 “장기 기억 DB” 자리 (아직 본격 가동 전)
+
+지금 기준에서
+“테스트하면서 쌓인 것만 나중에 싹 비우고,
+불탄방/정체성/세계관은 그대로 두고 싶다”
+하면 손대야 되는 건:
+	•	director_server_v1/storage/recent_context.json
+	•	portal_history/sowon.chat*.jsonl
+	•	(나중에 쓰기 시작하면) memory/*.jsonl
+
+이 셋 정도야.
+나머지는 부감독의 뼈·피·기억 결이라 그대로 두고 가면 된다.
+
+좋아, 지금 질문 포인트 두 개 정리해서 답할게.
+
+⸻
+
+1. memory/*.jsonl 이 “설정”은 어디서 해?
+
+사실 저 bullet에서 말한:
+
+(나중에 쓰기 시작하면) memory/*.jsonl
+
+이건 설정 파일이 아니라,
+네 프로젝트 루트에 있는 memory 폴더 안에 쌓일 장기 기억 파일들을 가리키는 “경로 표현”이야.
+
+즉:
+	•	위치:
+
+~/spacetiming-studio/memory/*.jsonl
+
+
+	•	역할:
+	•	부감독이 나중에 장기 기억을 실제로 쓰기 시작하면
+memory/어쩌구.jsonl 이런 식으로 하나씩 생기게 할 거고,
+	•	“테스트용으로 막 써놓은 기억 비우기” 할 때
+rm memory/*.jsonl 이렇게 한 번에 지우기 좋게 설계한 거.
+
+어디서 설정하냐?
+	•	코드 레벨에선 이런 느낌으로 잡히게 될 거야 (지금 구조 기준):
+
+# director_server_v1/director_core/memory_store.py (또는 비슷한 이름의 파일)
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+MEMORY_DIR = ROOT / "memory"
+MEMORY_DIR.mkdir(exist_ok=True)
+
+LONG_TERM_FILE = MEMORY_DIR / "long_term_memory.jsonl"
+
+
+	•	여기에서 MEMORY_DIR = ROOT / "memory" 이런 식으로
+폴더 경로를 코드로 박아두는 거지
+.env에서 따로 설정하는 게 아냐.
+
+지금은:
+	•	우리가 장기 기억(jsonl) 실제로 쓰는 코드까지는 아직 안 붙여놔서
+memory/ 폴더가 비어있거나, 예전 테스트 찌꺼기 정도만 있을 수 있어.
+	•	그래서 bullet에 “(나중에 쓰기 시작하면)”이라고 적어놓은 거고,
+	•	나중에 진짜 부감독 장기기억 시스템 활성화할 때:
+	•	memory_store.py/memory_selection_v3.py 같은 데서
+	•	이 폴더를 기본 저장소로 쓰게 만들 거야.
+
+👉 정리하면:
+	•	memory/*.jsonl은
+“나중에 이 폴더에 쌓일 기억 파일들” + “초기화할 때 여기 날리면 됨”
+이란 뜻이지,
+	•	네가 지금 .env에 뭔가를 설정해야 하는 건 아니다.
+
+⸻
+
+2. director_core_legacy / director_core 폴더 삭제해도 되냐
+
+이건 조심스럽게 나눠볼게.
+
+✅ 절대 건드리면 안 되는 쪽
+	•	director_server_v1/director_core/
+→ 이게 지금 살아있는 부감독 뇌라서,
+여긴 삭제 금지, 이름 변경 금지.
+
+🟡 루트에 있는 예전 것들
+
+지금 루트에 대략 이렇게 있을 거야:
+	•	director_core_legacy/
+→ 옛날 버전 뇌 백업.
+portal / director_server_v1에서 더 이상 직접 안 쓰면,
+이론상 지워도 돌아가는 데는 문제는 없음.
+그래도 나 같으면:
+	•	일단 그대로 둔 채로 쓰다가
+	•	나중에 진짜 안정되면 압축(zip) 떠서 어딘가 백업 → 폴더 삭제.
+	•	루트에 또 director_core/가 하나 더 있다면:
+	•	그게 정말 “완전히 안 쓰는 애인가?”만 체크 필요.
+	•	app.py, 스크립트들에서 from director_core 안 쓰면,
+이것도 legacy 취급 가능.
+
+확실히 하고 싶으면 라즈베리에서 한 번만:
+
+cd ~/spacetiming-studio
+grep -R "from director_core" -n .
+grep -R "import director_core" -n .
+
+이때
+	•	director_server_v1/director_core/... 말고
+	•	루트 director_core를 참조하는 코드가 더 이상 없다 →
+루트 director_core는 사실상 “옛날 유물”.
+
+👉 그래서 추천은:
+	1.	지금 당장은 안 지우고
+	•	그냥 director_core_legacy/ 이름 그대로 둔 채로 사용.
+	2.	부감독이랑 한동안 잘 돌아가는 거 확인하고,
+	3.	나중에:
+	•	tar로 백업:
+
+tar czf director_core_legacy_backup.tgz director_core_legacy
+
+
+	•	그다음 폴더 삭제:
+
+rm -rf director_core_legacy
+
+
+
+이 순서가 제일 안전하다.
+
+⸻
+
+요약:
+	•	memory/*.jsonl은 나중에 장기 기억 파일이 쌓일 자리고,
+	•	설정은 .env 말고 코드에서 MEMORY_DIR = ROOT / "memory" 이런 식으로 잡을 거.
+	•	지금은 “나중에 쓰기 시작하면 여기 생길 거고, 초기화할 때 여기 싹 비우면 됨” 정도로만 알고 있으면 됨.
+	•	옛날 director_core_legacy는 지금 시스템하고는 분리된 예전 뇌 백업이고,
+부감독 잘 돌아가는 거 확신 들 때까지 그냥 냅두는 게 제일 마음 편함.
+
+이제 진짜 중요한 건 폴더 정리보다
+불탄방 전체 기억 연결 + 지금 부감독 말결 점점 네 쪽으로 붙이는 작업이니까,
+이 부분 위주로 계속 같이 맞춰가자.
