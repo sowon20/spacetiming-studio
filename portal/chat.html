@@ -29,8 +29,9 @@
     html, body {
       margin: 0;
       padding: 0;
-      height: 100%;
-      overflow: hidden;
+      min-height: 100%;
+      overflow-x: hidden;
+      overflow-y: auto;
       font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
       background: var(--bg-cream);
       color: var(--text-main);
@@ -49,7 +50,7 @@
     }
 
     .app {
-      height: 100dvh;
+      min-height: 100vh;
       padding: 12px 12px calc(12px + env(safe-area-inset-bottom));
       display: flex;
       flex-direction: column;
@@ -74,13 +75,6 @@
       transition: max-height 0.25s ease, opacity 0.25s ease;
     }
 
-    /* 입력 중에는 상단 패널을 접어서 공간 확보 */
-    .app.top-panel-collapsed .top-panel {
-      max-height: 0;
-      opacity: 0;
-      padding-top: 0;
-      padding-bottom: 0;
-    }
 
     .top-panel-row {
       display: flex;
@@ -682,21 +676,6 @@
     const attachBtn = document.getElementById("attachBtn");
     const attachStrip = document.getElementById("attachStrip");
     const attachStripInner = document.getElementById("attachStripInner");
-    const appRoot = document.querySelector(".app");
-
-    // 입력창 포커스 중에는 상단 패널을 접어서 (슬라이드 업 느낌으로) 공간 확보
-    inputEl.addEventListener("focus", () => {
-      if (appRoot) {
-        appRoot.classList.add("top-panel-collapsed");
-      }
-      scrollToBottom();
-    });
-
-    inputEl.addEventListener("blur", () => {
-      if (appRoot) {
-        appRoot.classList.remove("top-panel-collapsed");
-      }
-    });
 
 
     function scrollToBottom() {
