@@ -605,38 +605,7 @@
     <!-- 메시지 영역 -->
     <main class="messages" id="messages">
       <div class="messages-inner" id="messagesInner">
-        <!-- 예시 메시지들 -->
-        <div class="msg-row other">
-          <div class="bubble-wrap" data-id="1">
-            <button class="bubble-menu-toggle" type="button">⋯</button>
-            <div class="bubble other">
-              부감독입니다. 오늘 작업 흐름 정리부터 갈까?
-            </div>
-            <div class="bubble-meta">21:40</div>
-            <div class="bubble-menu">
-              <button data-action="pin">핀</button>
-              <button data-action="edit">수정</button>
-              <button data-action="delete">삭제</button>
-              <button data-action="history">기록</button>
-            </div>
-          </div>
-        </div>
-
-        <div class="msg-row me">
-          <div class="bubble-wrap" data-id="2">
-            <button class="bubble-menu-toggle" type="button">⋯</button>
-            <div class="bubble me">
-              레이아웃만 깔끔하면 나머진 내가 채워 넣을게.
-            </div>
-            <div class="bubble-meta me">21:41</div>
-            <div class="bubble-menu">
-              <button data-action="pin">핀</button>
-              <button data-action="edit">수정</button>
-              <button data-action="delete">삭제</button>
-              <button data-action="history">기록</button>
-            </div>
-          </div>
-        </div>
+        <!-- 실제 메시지는 JS에서 렌더링 -->
       </div>
     </main>
 
@@ -676,45 +645,53 @@
     const attachStrip = document.getElementById("attachStrip");
     const attachStripInner = document.getElementById("attachStripInner");
 
+    const STORAGE_KEY = "director_chat_messages_v2";
+    let chatHistory = [];
 
-    function scrollToBottom() {
-      const messages = document.getElementById("messages");
-      messages.scrollTop = messages.scrollHeight;
-    }
-
-    scrollToBottom();
-
-    // textarea 자동 높이 조절
-    function autoResizeInput() {
-      inputEl.style.height = "auto";
-      const maxHeight = 88;
-      const newHeight = Math.min(inputEl.scrollHeight, maxHeight);
-      inputEl.style.height = newHeight + "px";
-    }
-
-    inputEl.addEventListener("input", autoResizeInput);
-    autoResizeInput();
-
-    // 엔터로 전송, Shift+Enter 줄바꿈
-    inputEl.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        sendMessage();
+    function loadHistory() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return [];
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed)) return [];
+        return parsed;
+      } catch (e) {
+        console.warn("chat history load failed", e);
+        return [];
       }
-    });
+    }
 
-    sendBtn.addEventListener("click", sendMessage);
+    function saveHistory() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(chatHistory));
+      } catch (e) {
+        console.warn("chat history save failed", e);
+      }
+    }
 
-    function sendMessage() {
-      const text = inputEl.value.trim();
-      if (!text) return;
+    function formatTime(ts) {
+      const d = ts ? new Date(ts) : new Date();
+      const hh = String(d.getHours()).padStart(2, "0");
+      const mm = String(d.getMinutes()).padStart(2, "0");
+      return `${hh}:${mm}`;
+    }
 
+    function createMessage(role, content, timestamp) {
+      return {
+        id: Date.now().toString() + Math.random().toString(16).slice(2),
+        role,
+        content,
+        timestamp: timestamp ?? Date.now(),
+      };
+    }
+
+    function appendMessageToDOM(msg) {
       const row = document.createElement("div");
-      row.className = "msg-row me";
+      row.className = "msg-row " + (msg.role === "assistant" ? "other" : "me");
 
       const wrap = document.createElement("div");
       wrap.className = "bubble-wrap";
-      wrap.dataset.id = Date.now().toString();
+      wrap.dataset.id = msg.id;
 
       const toggle = document.createElement("button");
       toggle.className = "bubble-menu-toggle";
@@ -722,16 +699,12 @@
       toggle.textContent = "⋯";
 
       const bubble = document.createElement("div");
-      bubble.className = "bubble me";
-      bubble.textContent = text;
+      bubble.className = "bubble " + (msg.role === "assistant" ? "other" : "me");
+      bubble.textContent = msg.content;
 
       const meta = document.createElement("div");
-      meta.className = "bubble-meta me";
-      const now = new Date();
-      meta.textContent =
-        String(now.getHours()).padStart(2, "0") +
-        ":" +
-        String(now.getMinutes()).padStart(2, "0");
+      meta.className = "bubble-meta" + (msg.role === "assistant" ? "" : " me");
+      meta.textContent = formatTime(msg.timestamp);
 
       const menu = document.createElement("div");
       menu.className = "bubble-menu";
@@ -755,10 +728,98 @@
       wrap.appendChild(menu);
       row.appendChild(wrap);
       messagesInner.appendChild(row);
+    }
+
+    function renderHistoryFromStorage() {
+      chatHistory = loadHistory();
+      if (!chatHistory.length) {
+        return;
+      }
+      messagesInner.innerHTML = "";
+      chatHistory.forEach((msg) => appendMessageToDOM(msg));
+      scrollToBottom();
+    }
+
+    function scrollToBottom() {
+      const messages = document.getElementById("messages");
+      messages.scrollTop = messages.scrollHeight;
+    }
+
+    // textarea 자동 높이 조절
+    function autoResizeInput() {
+      inputEl.style.height = "auto";
+      const maxHeight = 88;
+      const newHeight = Math.min(inputEl.scrollHeight, maxHeight);
+      inputEl.style.height = newHeight + "px";
+    }
+
+    inputEl.addEventListener("input", autoResizeInput);
+    autoResizeInput();
+
+    // 엔터로 전송, Shift+Enter 줄바꿈
+    inputEl.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+
+    sendBtn.addEventListener("click", () => {
+      sendMessage();
+    });
+
+    async function sendMessage() {
+      const text = inputEl.value.trim();
+      if (!text) return;
+
+      // 1) 내 메시지 바로 추가
+      const userMsg = createMessage("user", text);
+      chatHistory.push(userMsg);
+      appendMessageToDOM(userMsg);
+      saveHistory();
 
       inputEl.value = "";
       autoResizeInput();
       scrollToBottom();
+
+      // 2) 부감독에게 전달
+      try {
+        const resp = await fetch("/api/chat", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            messages: [{ role: "user", content: text }],
+          }),
+        });
+
+        if (!resp.ok) {
+          throw new Error(`HTTP ${resp.status}`);
+        }
+
+        const data = await resp.json();
+        const replyText =
+          data && typeof data.reply === "string" ? data.reply.trim() : "";
+
+        if (replyText) {
+          const assistantMsg = createMessage("assistant", replyText);
+          chatHistory.push(assistantMsg);
+          appendMessageToDOM(assistantMsg);
+          saveHistory();
+          scrollToBottom();
+        }
+      } catch (e) {
+        console.error(e);
+        const errorMsg = createMessage(
+          "assistant",
+          "연결 중 오류가 났어. (HTTP 오류)"
+        );
+        chatHistory.push(errorMsg);
+        appendMessageToDOM(errorMsg);
+        saveHistory();
+        scrollToBottom();
+      }
     }
 
     // 말풍선 메뉴 토글 + 핀/삭제 등
@@ -788,12 +849,16 @@
           pinText.textContent = text;
           pinCapsule.style.display = "flex";
         } else if (action === "delete") {
-          wrap.closest(".msg-row").remove();
+          const row = wrap.closest(".msg-row");
+          if (row) row.remove();
+          if (wrap.dataset.id) {
+            chatHistory = chatHistory.filter((m) => m.id !== wrap.dataset.id);
+            saveHistory();
+          }
         } else if (action === "edit") {
           inputEl.value = bubbleEl.textContent || "";
           inputEl.focus();
         } else if (action === "history") {
-          // 나중에 로그/히스토리 붙일 자리
           console.log("history clicked for", wrap.dataset.id);
         }
 
@@ -806,10 +871,9 @@
       pinText.textContent = "";
     });
 
-    // 첨부 프리뷰 데모
+    // 첨부 프리뷰 데모 (나중에 실제 업로드로 교체 가능)
     let demoAttach = 0;
     attachBtn.addEventListener("click", () => {
-      // 실제 구현에선 파일 선택 붙이면 됨. 지금은 데모용.
       demoAttach++;
       attachStrip.style.display = "block";
       const pill = document.createElement("div");
@@ -839,13 +903,16 @@
       attachStripInner.appendChild(pill);
     });
 
-    // 바깥 클릭 시 메뉴 닫기
+    // 바깥 클릭 시 열려있는 말풍선 메뉴 닫기
     document.addEventListener("click", (e) => {
       if (e.target.closest(".bubble-wrap")) return;
       document
         .querySelectorAll(".bubble-menu.show")
         .forEach((m) => m.classList.remove("show"));
     });
+
+    // 페이지 로드 시 저장된 대화 불러오기
+    renderHistoryFromStorage();
   </script>
 </body>
 </html>
