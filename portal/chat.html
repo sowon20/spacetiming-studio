@@ -69,6 +69,17 @@
       backdrop-filter: blur(16px) saturate(140%);
       -webkit-backdrop-filter: blur(16px) saturate(140%);
       box-shadow: 0 18px 40px rgba(5, 7, 6, 0.55);
+      max-height: 160px;
+      overflow: hidden;
+      transition: max-height 0.25s ease, opacity 0.25s ease;
+    }
+
+    /* 입력 중에는 상단 패널을 접어서 공간 확보 */
+    .app.top-panel-collapsed .top-panel {
+      max-height: 0;
+      opacity: 0;
+      padding-top: 0;
+      padding-bottom: 0;
     }
 
     .top-panel-row {
@@ -671,10 +682,20 @@
     const attachBtn = document.getElementById("attachBtn");
     const attachStrip = document.getElementById("attachStrip");
     const attachStripInner = document.getElementById("attachStripInner");
+    const appRoot = document.querySelector(".app");
 
-    // 입력창 포커스 시 메시지 영역만 맨 아래로 정렬
+    // 입력창 포커스 중에는 상단 패널을 접어서 (슬라이드 업 느낌으로) 공간 확보
     inputEl.addEventListener("focus", () => {
+      if (appRoot) {
+        appRoot.classList.add("top-panel-collapsed");
+      }
       scrollToBottom();
+    });
+
+    inputEl.addEventListener("blur", () => {
+      if (appRoot) {
+        appRoot.classList.remove("top-panel-collapsed");
+      }
     });
 
 
