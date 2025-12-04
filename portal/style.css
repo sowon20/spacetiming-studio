@@ -924,194 +924,22 @@ body::before {
 [hidden] {
   display: none !important;
 }
-/* === Warm cohesive chat skin (cafe / diary vibe) ======================= */
 
-/* Palette override */
-:root {
-  --bg-shell: #f3eee7;
-  --bg-shell-strong: #e4ddd0;
-  --bg-shell-soft: #f8f3ec;
+/* === Background presets for glass mode =============================== */
+/* 기본값: 기존 배경 유지 (클래스 없을 때) */
 
-  --card-surface: #fdfaf6;
-  --card-elevated: #ffffff;
-  --card-muted: #ece4d9;
-
-  --text-primary: #292524;
-  --text-secondary: #6b5f58;
-  --text-tertiary: #a39a92;
-
-  --accent-main: #d0b49f;     /* soft sand */
-  --accent-strong: #7d6d61;   /* warm brown */
-  --accent-soft: #e6c9ac;     /* lighter sand */
-  --accent-success: #7da58e;  /* moss green */
-
-  --border-subtle: rgba(148, 131, 113, 0.28);
-  --border-strong: rgba(87, 74, 63, 0.6);
-
-  --shadow-soft-sm: 0 6px 16px rgba(15, 23, 42, 0.08);
-  --shadow-soft-md: 0 14px 32px rgba(15, 23, 42, 0.12);
-  --shadow-soft-lg: 0 24px 64px rgba(15, 23, 42, 0.15);
-
-  --radius-lg: 26px;
-  --radius-md: 18px;
-  --radius-sm: 12px;
-
-  --font-primary: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
-
-  --safe-top: env(safe-area-inset-top);
-  --safe-bottom: env(safe-area-inset-bottom);
-  --safe-left: env(safe-area-inset-left);
-  --safe-right: env(safe-area-inset-right);
+body.bg-forest-book {
+  background-image: url("backgrounds/forest_book.jpg");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 
-/* Page background = warm desk / paper */
-body {
-  font-family: var(--font-primary);
-  background:
-    radial-gradient(circle at 0% 0%, rgba(255, 255, 255, 0.9) 0%, transparent 55%),
-    radial-gradient(circle at 100% 100%, rgba(232, 210, 186, 0.55) 0%, transparent 55%),
-    linear-gradient(180deg, #f5efe7 0%, #efe4d6 42%, #e6dacb 100%);
-  color: var(--text-primary);
-  height: 100vh;
-  overflow: hidden;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  padding: var(--safe-top) var(--safe-right) var(--safe-bottom) var(--safe-left);
+body.bg-sprout-sun {
+  background-image: url("backgrounds/sprout_sun.jpg");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background-image:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.55) 0%, transparent 60%),
-    radial-gradient(circle at 14% 18%, rgba(255, 255, 255, 0.35) 0%, transparent 55%),
-    radial-gradient(circle at 88% 82%, rgba(230, 203, 175, 0.24) 0%, transparent 55%);
-  background-size: 100% 100%, 900px 900px, 900px 900px;
-  background-position: 0 0, 0 0, 0 0;
-  pointer-events: none;
-  z-index: 0;
-  opacity: 0.9;
-}
-
-/* Overall layout shell stays transparent so 배경이 살아나게 */
-.page-shell {
-  max-width: 760px;
-  margin: 0 auto;
-  height: calc(100vh - var(--safe-top) - var(--safe-bottom));
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  background: transparent;
-  position: relative;
-  z-index: 1;
-}
-
-/* Top region = 부드러운 대시보드 카드 (살짝 진한 종이) */
-.top-region {
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  padding: 14px 18px 12px;
-  border-radius: var(--radius-lg);
-  background:
-    linear-gradient(145deg, rgba(51, 43, 39, 0.98), rgba(35, 31, 29, 0.98));
-  color: #fefcf9;
-  box-shadow: 0 18px 40px rgba(40, 28, 24, 0.55);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-/* Main chat surface = 한 장의 크림색 카드 */
-.main {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  gap: 18px;
-  background: transparent;
-}
-
-.chat-main {
-  background: linear-gradient(180deg, #fdf8f1 0%, #fbf3ea 100%);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-soft-md);
-  border: 1px solid rgba(148, 131, 113, 0.26);
-}
-
-.chat-scroll-region {
-  background: transparent;
-}
-
-/* Assistant bubble – 밝은 크림색 메모지 느낌 */
-.message-row.assistant .msg-bubble {
-  background:
-    radial-gradient(circle at 0% 0%, rgba(245, 222, 200, 0.36), transparent 55%),
-    #fdf7ef;
-  border-radius: 22px;
-  border: 1px solid rgba(206, 187, 163, 0.7);
-  color: #3b302c;
-  box-shadow: 0 10px 28px rgba(148, 131, 113, 0.30);
-}
-
-/* User bubble – 따뜻한 브라운 캡슐 */
-.message-row.user .msg-bubble {
-  background: #7d6d61;
-  color: #fdfaf6;
-  border-radius: 22px;
-  border-bottom-right-radius: 8px;
-  box-shadow: 0 10px 28px rgba(87, 74, 63, 0.35);
-}
-
-/* Meta line – 컬러만 살짝 톤다운 */
-.msg-author {
-  color: rgba(107, 95, 88, 0.95);
-}
-
-.message-row.user .msg-author {
-  color: rgba(50, 40, 35, 0.9);
-}
-
-/* Composer = 둥근 캡슐, 종이 위 도구 느낌 */
-.composer-shell {
-  background: rgba(253, 250, 246, 0.96);
-  border-radius: 999px;
-  box-shadow: 0 14px 40px rgba(15, 23, 42, 0.18);
-  border: 1px solid rgba(209, 192, 172, 0.9);
-}
-
-.composer-input {
-  background: transparent;
-  color: var(--text-primary);
-}
-
-.composer-input::placeholder {
-  color: rgba(120, 113, 108, 0.7);
-}
-
-/* Attachments zone는 배경 없이 라인만 */
-.attachments-strip {
-  background: transparent;
-}
-
-/* Send button – 살구색 작은 원 버튼 */
-.send-button {
-  width: 36px;
-  height: 36px;
-  border-radius: 999px;
-  border: none;
-  background: radial-gradient(circle at 0% 0%, #fbe2c5, #e1b27a);
-  box-shadow: 0 10px 24px rgba(148, 96, 44, 0.35);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-}
-
-.send-button svg,
-.send-button span {
-  color: #3b302c;
-}
-
-.send-button:disabled {
-  opacity: 0.45;
-  box-shadow: none;
-}
+/* 필요하면 나중에 더 추가: body.bg-xxx { ... } */
