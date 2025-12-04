@@ -218,7 +218,7 @@ function renderAttachments() {
     const pill = document.createElement("div");
     pill.className = "attachment-pill";
 
-    // 이미지 파일이면 썸네일 미리보기, 그 외에는 파일 이름 표시
+    // 이미지 파일이면 썸네일, 아니면 파일 이름만
     if (f.type && f.type.startsWith("image/")) {
       const img = document.createElement("img");
       img.src = URL.createObjectURL(f);
