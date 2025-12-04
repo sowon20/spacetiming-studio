@@ -44,7 +44,7 @@ HISTORY_FILES = [
 
 
 def _load_history(limit: int = 80) -> List[HistoryItem]:
-    items: List[HistoryItem] = []
+    items_by_key: dict[str, HistoryItem] = {}
 
     for path in HISTORY_FILES:
         try:
@@ -69,22 +69,22 @@ def _load_history(limit: int = 80) -> List[HistoryItem]:
                         if len(parts) == 2 and ":" in parts[1]:
                             t_display = parts[1][:5]
 
-                    items.append(
-                        HistoryItem(
-                            id=msg_id,
-                            role=role,
-                            content=text,
-                            time=t_display,
-                        )
+                    # sowon.chat / sowon.chat.mac 에서 동일 발화가 중복되는 걸 막기 위한 키
+                    key = f"{msg_id}|{role}|{text}"
+                    items_by_key[key] = HistoryItem(
+                        id=msg_id or key,
+                        role=role,
+                        content=text,
+                        time=t_display,
                     )
         except FileNotFoundError:
             continue
 
-    if not items:
+    if not items_by_key:
         return []
 
     # 최신 순으로 정렬 후 limit만큼 자르기
-    items_sorted = sorted(items, key=lambda x: x.id)[-limit:]
+    items_sorted = sorted(items_by_key.values(), key=lambda x: x.id)[-limit:]
     return items_sorted
 
 
