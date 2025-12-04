@@ -674,11 +674,19 @@
     const attachStrip = document.getElementById("attachStrip");
     const attachStripInner = document.getElementById("attachStripInner");
 
-    // 입력창 포커스 시 최근 메시지가 항상 보이도록 보정
+    // 전체 페이지와 메시지 영역을 함께 맨 아래로 스크롤
+    function scrollPageToBottom() {
+      window.scrollTo(0, document.body.scrollHeight);
+    }
+
+    // 입력창 포커스 시 최근 메시지와 입력창이 항상 보이도록 보정
     inputEl.addEventListener("focus", () => {
-      // 키보드가 완전히 올라온 뒤에도 한 번 더 맞춰주기 위해 두 번 호출
       scrollToBottom();
-      setTimeout(scrollToBottom, 200);
+      scrollPageToBottom();
+      setTimeout(() => {
+        scrollToBottom();
+        scrollPageToBottom();
+      }, 200);
     });
 
 
@@ -688,6 +696,7 @@
     }
 
     scrollToBottom();
+    scrollPageToBottom();
 
     // textarea 자동 높이 조절
     function autoResizeInput() {
