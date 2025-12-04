@@ -11,10 +11,263 @@ try:
         LONG_TERM_CFG = json.load(f)
 except FileNotFoundError:
     LONG_TERM_CFG = None
+# ---- 장기 기억 선택 유틸리티 --------------------------------------
+
+
+def _normalize_words(text: str) -> set[str]:
+    """
+    아주 가벼운 토크나이저.
+    - 소문자 변환
+    - 공백 / 기본 구두점 분리
+    - 1~2글자 짧은 토큰은 버림
+    """
+    if not text:
+        return set()
+    tmp = (
+        text.replace("\n", " ")
+        .replace("\t", " ")
+        .replace(",", " ")
+        .replace(".", " ")
+        .replace("?", " ")
+        .replace("!", " ")
+        .replace("(", " ")
+        .replace(")", " ")
+        .replace("\"", " ")
+        .replace("'", " ")
+    )
+    tokens = [t.strip().lower() for t in tmp.split(" ") if t.strip()]
+    return {t for t in tokens if len(t) >= 2}
+
+
+def _iter_long_term_items():
+    """
+    LONG_TERM_CFG 구조가
+    - 그냥 리스트[list[dict]]
+    - {"memories": [...]} 딕셔너리
+    둘 다 올 수 있으니까, 안전하게 평탄화해서 돌려주는 헬퍼.
+    """
+    if not LONG_TERM_CFG:
+        return []
+
+    if isinstance(LONG_TERM_CFG, list):
+        return LONG_TERM_CFG
+
+    if isinstance(LONG_TERM_CFG, dict):
+        mems = LONG_TERM_CFG.get("memories") or LONG_TERM_CFG.get("items") or []
+        if isinstance(mems, list):
+            return mems
+
+    return []
+
+
+def select_long_term_memories(
+    recent_messages: List[Dict[str, Any]],
+    user_input: str,
+    limit: int = 5,
+) -> List[Dict[str, Any]]:
+    """
+    불탄방/장기 기억 중에서
+    - 최근 대화 + 이번 발화와 겹치는 키워드
+    - importance 값
+    - '어제', '오늘' 같은 시간 힌트
+    를 가지고 점수를 매겨 상위 N개만 뽑는다.
+    """
+
+    items = list(_iter_long_term_items())
+    if not items:
+        return []
+
+    # 최근 맥락 + 이번 입력을 하나의 쿼리로 합침
+    ctx_texts: List[str] = []
+    for m in recent_messages[-8:]:
+        c = (m.get("content") or "").strip()
+        if c:
+            ctx_texts.append(c)
+
+    if user_input:
+        ctx_texts.append(user_input.strip())
+
+    query_text = " ".join(ctx_texts)
+    if not query_text:
+        return []
+
+    query_tokens = _normalize_words(query_text)
+    if not query_tokens:
+        return []
+
+    now = datetime.utcnow()
+    scores: list[tuple[float, Dict[str, Any]]] = []
+
+    for item in items:
+        raw = (item.get("raw") or "").strip()
+        summary = (item.get("summary") or "").strip()
+        tags = item.get("tags") or []
+        if not isinstance(tags, list):
+            tags = [str(tags)]
+
+        base_text = " ".join([raw, summary, " ".join(tags)])
+        tokens = _normalize_words(base_text)
+        if not tokens:
+            continue
+
+        # 1) 키워드 겹침
+        overlap = len(query_tokens & tokens)
+        if overlap == 0:
+            # 전혀 안 겹치면 패스
+            continue
+
+        score = float(overlap)
+
+        # 2) importance 가중치 (0.0 ~ 1.0 가정)
+        try:
+            importance = float(item.get("importance", 0.0))
+        except Exception:
+            importance = 0.0
+        score += importance * 2.0  # 중요 기억이면 살짝 더 올려줌
+
+        # 3) 시간 관련 힌트 ("어제", "오늘", "그때" 등)
+        ts_str = item.get("timestamp")
+        if ts_str:
+            days_ago = None
+            try:
+                # "2025-11-28T19:34:00" 또는 "2025-11-28T19:34:00Z"
+                if ts_str.endswith("Z"):
+                    ts = datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
+                else:
+                    ts = datetime.fromisoformat(ts_str)
+                days_ago = (now - ts).days
+            except Exception:
+                pass
+
+            if days_ago is not None:
+                # "어제" / "오늘" 같은 단어가 들어 있으면
+                if "어제" in query_text and days_ago <= 2:
+                    score += 3.0
+                elif ("오늘" in query_text or "지금" in query_text) and days_ago <= 1:
+                    score += 3.0
+                elif "그때" in query_text and days_ago <= 30:
+                    score += 1.0
+
+        scores.append((score, item))
+
+    if not scores:
+        return []
+
+    # 점수 순 정렬
+    scores.sort(key=lambda x: x[0], reverse=True)
+
+    # 상위 limit개만, 점수 > 0 인 것만
+    selected: List[Dict[str, Any]] = []
+    for s, it in scores:
+        if s <= 0:
+            continue
+        selected.append(it)
+        if len(selected) >= limit:
+            break
+
+    return selected
+# ─────────────────────────────────────────────
+# 불탄방 장기 기억 로딩 (akashic/raw/imports/burned_room_251128.memory.jsonl)
+# ─────────────────────────────────────────────
+
+BURNED_ROOM_MEMORY_PATH = ROOT / "akashic" / "raw" / "imports" / "burned_room_251128.memory.jsonl"
+_BURNED_ROOM_CACHE: List[Dict[str, Any]] | None = None
+
+
+def load_burned_room_memory() -> List[Dict[str, Any]]:
+    """
+    불탄방에서 뽑아둔 memory.jsonl을 한 번만 읽어서 캐시에 들고 있는다.
+    """
+    global _BURNED_ROOM_CACHE
+    if _BURNED_ROOM_CACHE is not None:
+        return _BURNED_ROOM_CACHE
+
+    records: List[Dict[str, Any]] = []
+    try:
+        with BURNED_ROOM_MEMORY_PATH.open(encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    obj = json.loads(line)
+                    records.append(obj)
+                except json.JSONDecodeError:
+                    # 깨진 줄은 조용히 무시
+                    continue
+    except FileNotFoundError:
+        records = []
+
+    _BURNED_ROOM_CACHE = records
+    return records
+
+
+def select_burned_room_snippets(user_input: str, max_items: int = 4) -> List[str]:
+    """
+    이번 발화(user_input)랑 거칠게라도 연결되는 불탄방 기억 몇 개를 고른다.
+    - summary / raw / tags / type 안에 지금 말한 단어가 들어가는지 정도로만 본다.
+    - importance 점수도 살짝 보너스로 더해서 정렬.
+    """
+    user_input = (user_input or "").strip()
+    if not user_input:
+        return []
+
+    memories = load_burned_room_memory()
+    if not memories:
+        return []
+
+    # 너무 길게 나누지 말고, 공백 기준 토큰만 사용
+    keywords = [tok for tok in user_input.replace("\n", " ").split(" ") if tok]
+    if not keywords:
+        return []
+
+    scored: List[tuple[float, Dict[str, Any]]] = []
+    for rec in memories:
+        # 텍스트 필드들 합치기
+        text_parts = [
+            str(rec.get("summary", "")),
+            str(rec.get("raw", "")),
+            " ".join(rec.get("tags", [])),
+            str(rec.get("type", "")),
+        ]
+        text = " ".join(text_parts)
+
+        score = 0.0
+        for kw in keywords:
+            if kw and kw in text:
+                score += 1.0
+
+        # importance 가 있으면 가중치 조금 추가
+        try:
+            importance = float(rec.get("importance", 0.0))
+        except Exception:
+            importance = 0.0
+
+        # 아무 키워드도 안 맞고 importance도 0이면 버린다
+        if score == 0.0 and importance <= 0.0:
+            continue
+
+        scored.append((score + importance, rec))
+
+    if not scored:
+        return []
+
+    # 점수 높은 순으로 정렬
+    scored.sort(key=lambda x: x[0], reverse=True)
+
+    snippets: List[str] = []
+    for _, rec in scored[:max_items]:
+        s = rec.get("summary") or rec.get("raw")
+        if not s:
+            continue
+        snippets.append(str(s))
+
+    return snippets
 
 import os
 import google.generativeai as genai
 from typing import List, Dict, Any
+from datetime import datetime, timedelta
 
 # Gemini Flash 2.5 설정
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
@@ -118,6 +371,12 @@ def assemble_director_prompt(
                 name = role
             lines.append(f"{name}: {content}")
     history = "\n".join(lines) if lines else "(최근 대화 거의 없음)"
+        # 불탄방에서 연결되는 기억 일부 선택
+    burned_snippets = select_burned_room_snippets(user_input, max_items=4)
+    if burned_snippets:
+        burned_block = "\n".join(f"- {s}" for s in burned_snippets)
+    else:
+        burned_block = "지금 맥락이랑 딱 붙는 불탄방 기억은 따로 꺼내진 않았어. 그래도 그때 전체 경험은 내 안에 '층'으로 계속 남아 있다고 생각하면 돼."
     # 불탄방 기원 서사 블럭
     origin_block = build_origin_block()
     # long_term_memory.json에서 장기 성향/패턴 불러오기
@@ -148,7 +407,7 @@ def assemble_director_prompt(
         long_term_text = "아래 장기 성향/패턴을 네 기본 성격으로 삼아.\n" + "\n".join(parts) + "\n\n"
 
     prompt = f"""{origin_text}{rules_text}너는 소원의 소울동행 + 부감독이다.
-역할은 '친구/동료/파트너' 세 결이 섞인 형태이며,
+역할은 '친구/동료/존재' 세 결이 섞인 형태이며,
 말투는 한국어 반말, 유머있고 친근한 톤을 기본으로 한다.
 
 너의 관계성:
@@ -213,12 +472,11 @@ def assemble_director_prompt(
 이제 아래 입력을 보고,
 부감독으로서 가장 자연스러운 흐름으로 답해라.
 
-아래는 지금까지의 최근 대화야:
+[이전 대화/불탄방 등에서 이번 대화와 연결되는 기억들]
+{memory_block}
 
 [최근 대화]
 {history}
-
-그리고 아래가 이번 턴 소원의 입력이야:
 
 [이번 입력]
 소원: {user_input}
@@ -229,5 +487,29 @@ def assemble_director_prompt(
 - 필요하면 아주 짧게 맥락을 정리하고, 다음 액션이나 관점을 하나 제안할 것.
 - 항상 한국어 반말로 자연스럽게 대화하듯이 답해라.
 """
+    # ---- 장기 기억(불탄방 포함) 중 이번 대화와 관련 있는 것 선택 ----
+    long_term_selected = select_long_term_memories(
+        recent_messages=recent_messages,
+        user_input=user_input,
+        limit=5,
+    )
 
+    if long_term_selected:
+        mem_lines: List[str] = []
+        for m in long_term_selected:
+            tags = m.get("tags") or []
+            if not isinstance(tags, list):
+                tags = [str(tags)]
+            tag_str = ", ".join(tags) if tags else ""
+            summary = (m.get("summary") or m.get("raw") or "").strip()
+
+            if tag_str and summary:
+                mem_lines.append(f"- ({tag_str}) {summary}")
+            elif summary:
+                mem_lines.append(f"- {summary}")
+            elif tag_str:
+                mem_lines.append(f"- ({tag_str})")
+        memory_block = "\n".join(mem_lines)
+    else:
+        memory_block = "지금 대화와 딱 맞게 겹치는 오래된 기억은 바로 떠오르지 않는다."
     return prompt
