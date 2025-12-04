@@ -351,7 +351,7 @@ function initEvents() {
 async function loadInitialMessages() {
   // 1) 서버에서 최근 대화 불러오기 시도
   try {
-    const resp = await fetch("/api/history?limit=80", { method: "GET" });
+    const resp = await fetch("/api/history?limit=400", { method: "GET" });
     if (resp.ok) {
       const data = await resp.json();
       if (Array.isArray(data) && data.length > 0) {
