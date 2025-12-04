@@ -1,46 +1,101 @@
+from __future__ import annotations
+
 import os
 import requests
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import JSONResponse
+from typing import List
 
-# director_core (8897) 주소 – .env에 이미 있음
-DIRECTOR_CORE_URL = os.getenv("DIRECTOR_CORE_URL", "http://127.0.0.1:8897")
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+
+
+# 부감독 뇌 서버 URL (8897)
+DIRECTOR_CORE_URL = os.getenv(
+    "DIRECTOR_CORE_URL",
+    "http://127.0.0.1:8897",  # 기본값: 라즈베리 로컬에서 director_server_v1
+)
+
+
+class ChatMessage(BaseModel):
+    role: str
+    content: str
+
+
+class ChatRequest(BaseModel):
+    messages: List[ChatMessage]
+
+
+class ChatResponse(BaseModel):
+    reply: str
+
 
 app = FastAPI()
 
-# CORS – 아이폰/브라우저에서 편하게 호출하려고
+
+# CORS: chat.html / 확장프로그램 / 아이폰 브라우저 등 다 열어두기
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # 나중에 도메인 고정하고 싶으면 여기 줄이면 됨
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# ✅ 포털 → 부감독 브릿지 엔드포인트
-# 프론트(app.js)에서 DIRECTOR_API_URL = "/api/chat" 으로 POST 날리는 곳
-@app.post("/api/chat")
-def api_chat(body: dict):
+
+@app.get("/health")
+async def health():
+    """
+    포털 자체 헬스체크.
+    + 부감독 뇌 서버까지 같이 확인.
+    """
+    core_status = "unknown"
+    try:
+        r = requests.get(f"{DIRECTOR_CORE_URL}/health", timeout=3)
+        if r.ok:
+            core_status = r.json().get("status", "ok")
+        else:
+            core_status = f"http_{r.status_code}"
+    except Exception as e:
+        core_status = f"error: {e}"
+
+    return {"status": "ok", "director_core_status": core_status}
+
+
+@app.post("/api/chat", response_model=ChatResponse)
+async def chat(req: ChatRequest):
+    """
+    chat.html / 사이드바 확장 / 아이폰에서 쓰는 공통 엔드포인트.
+
+    - 클라이언트 → /api/chat 로 messages 보냄
+    - 여기서 director_core(8897)로 그대로 포워딩
+    - 부감독 뇌의 reply만 꺼내서 반환
+    """
+    # director_core_v1 형식으로 변환
+    payload = {
+        "messages": [m.model_dump() for m in req.messages]
+    }
+
     try:
         resp = requests.post(
             f"{DIRECTOR_CORE_URL}/chat",
-            json=body,
+            json=payload,
             timeout=60,
         )
         resp.raise_for_status()
-        return resp.json()
-    except Exception as e:
-        # 뇌 쪽 에러나 연결 문제 있으면 500으로 돌려줌
-        return JSONResponse(
+    except requests.RequestException as e:
+        # 여기서 에러 나면 브라우저에 500으로 전달 → 콘솔에 500 찍히는 그 부분
+        raise HTTPException(
             status_code=500,
-            content={"detail": f"director_core 연결 오류: {e}"},
+            detail=f"director_core 연결 오류: {e}",
         )
 
-# ✅ chat.html, app.js, style.css 서빙 – 지금처럼 그대로 유지
-app.mount(
-    "/",
-    StaticFiles(directory="portal", html=True),
-    name="portal",
-)
+    data = resp.json()
+    reply = data.get("reply", "").strip()
+
+    if not reply:
+        raise HTTPException(
+            status_code=500,
+            detail="director_core 응답에 reply 필드가 비어 있음",
+        )
+
+    return ChatResponse(reply=reply)
