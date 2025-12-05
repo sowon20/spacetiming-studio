@@ -25,7 +25,7 @@ let typingRow = null;
 
 let isSending = false;
 
-const STORAGE_KEY = "director_chat_messages_v1";
+const STORAGE_KEY = "director_chat_messages_v2";
 
 function escapeHtml(str) {
   if (str === null || str === undefined) return "";
