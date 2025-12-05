@@ -32,13 +32,13 @@
       background: var(--bg-cream);
     }
 
-.app {
-  height: calc(var(--vh) * 100);
-  padding: 0 12px calc(12px + env(safe-area-inset-bottom));
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
+    .app {
+      height: calc(var(--vh) * 100);
+      padding: 0 12px calc(12px + env(safe-area-inset-bottom));
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
 
     /* 상단 패널 */
 
