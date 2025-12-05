@@ -358,8 +358,50 @@
     }
 
     .bubble.typing {
-      opacity: 0.85;
-      letter-spacing: 2px;
+      opacity: 0.9;
+      letter-spacing: 0;
+    }
+
+    .typing-dots {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+    }
+
+    .typing-dot {
+      width: 4px;
+      height: 4px;
+      border-radius: 999px;
+      background: currentColor;
+      opacity: 0.25;
+      animation: typingBlink 1s infinite ease-in-out;
+    }
+
+    .typing-dot:nth-child(2) {
+      animation-delay: 0.15s;
+    }
+
+    .typing-dot:nth-child(3) {
+      animation-delay: 0.3s;
+    }
+
+    @keyframes typingBlink {
+      0% {
+        opacity: 0.2;
+        transform: translateY(0);
+      }
+      30% {
+        opacity: 0.9;
+        transform: translateY(-1px);
+      }
+      60% {
+        opacity: 0.4;
+        transform: translateY(0);
+      }
+      100% {
+        opacity: 0.2;
+        transform: translateY(0);
+      }
     }
 
 
@@ -1169,8 +1211,17 @@
 
       const bubble = document.createElement("div");
       bubble.className = "bubble other typing";
-      bubble.textContent = "…";
 
+      const dots = document.createElement("div");
+      dots.className = "typing-dots";
+
+      for (let i = 0; i < 3; i++) {
+        const dot = document.createElement("span");
+        dot.className = "typing-dot";
+        dots.appendChild(dot);
+      }
+
+      bubble.appendChild(dots);
       wrap.appendChild(bubble);
       row.appendChild(wrap);
       messagesInner.appendChild(row);
