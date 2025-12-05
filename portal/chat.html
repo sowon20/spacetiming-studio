@@ -49,6 +49,7 @@
       font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
       color: var(--text-main);
       -webkit-text-size-adjust: 100%;
+      background-color: transparent; /* 배경은 고정 div가 담당 */
     }
 
     html {
@@ -56,21 +57,30 @@
     }
 
     body {
-      background: var(--bg-cream);
+      background: transparent;
     }
 
     body.app-bg-forest {
+      position: relative; /* 배경은 고정 div가 담당하므로 여기서는 레이아웃만 유지 */
+    }
+
+    /* 화면 전체를 덮는 고정 배경 레이어 (노치 포함) */
+    #fixed-background {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: -1; /* 앱 내용 뒤로 */
       background-image: url("/static/backgrounds/forest_book.jpg");
       background-size: cover;
       background-position: center;
       background-repeat: no-repeat;
-      position: relative;
-      min-height: 100vh; /* 세로가 짧을 때도 배경이 잘리거나 반복되지 않게 */
     }
 
-    body.app-bg-forest::before {
+    #fixed-background::after {
       content: "";
-      position: fixed;
+      position: absolute;
       top: 0;
       left: 0;
       right: 0;
@@ -81,7 +91,6 @@
         rgba(6, 7, 6, 0.0)
       );
       pointer-events: none;
-      z-index: 0;
     }
 
     .app {
@@ -771,6 +780,7 @@
   </style>
 </head>
 <body class="app-bg-forest">
+  <div id="fixed-background"></div>
   <div class="app">
     <input type="file" id="bgImageInput" accept="image/*" style="display:none" />
     <!-- 상단 세이지 패널 -->
@@ -874,6 +884,7 @@
     const bodyEl = document.body;
     const bgImageInput = document.getElementById("bgImageInput");
     const bgChangeBtn = document.getElementById("bgChangeBtn");
+    const bgEl = document.getElementById("fixed-background");
 
     const TYPING_ROW_ID = "assistant-typing";
 
@@ -917,7 +928,7 @@
     }
 
     // 배경 이미지 변경: 아이폰 사진첩에서 선택해서 현재 세션 배경으로 사용
-    if (bgChangeBtn && bgImageInput && bodyEl) {
+    if (bgChangeBtn && bgImageInput && bgEl) {
       bgChangeBtn.addEventListener("click", () => {
         bgImageInput.click();
       });
@@ -944,11 +955,8 @@
         const url = URL.createObjectURL(file);
         currentBgObjectUrl = url;
 
-        // body 배경을 선택한 이미지로 교체 (노치 아래 전체를 채우는 용도)
-        bodyEl.style.backgroundImage = `url("${url}")`;
-        bodyEl.style.backgroundSize = "cover";
-        bodyEl.style.backgroundPosition = "center";
-        bodyEl.style.backgroundRepeat = "no-repeat";
+        // 고정 배경 div에 선택한 이미지를 적용 (노치 포함 전체 화면)
+        bgEl.style.backgroundImage = `url("${url}")`;
 
         // 같은 파일 다시 선택해도 change 이벤트가 뜨도록 초기화
         input.value = "";
