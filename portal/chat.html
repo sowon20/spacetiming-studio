@@ -257,11 +257,49 @@
       backdrop-filter: blur(18px);
       -webkit-backdrop-filter: blur(18px);
       overflow-y: auto;
-      overflow-x: hidden;
+      overflow-x: visible;      /* 말풍선 메뉴가 잘리지 않도록 */
       -webkit-overflow-scrolling: auto; /* iOS 고무줄/미끌미끌 효과 줄이기 */
       font-size: 13px;
       position: relative;
     }
+
+        /* 풀스크린 이미지 뷰어 */
+    .image-viewer-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.96);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+
+    .image-viewer-overlay.show {
+      display: flex;
+    }
+
+    .image-viewer-overlay img {
+      max-width: 100vw;
+      max-height: 100vh;
+      object-fit: contain;
+    }
+
+    .image-viewer-close {
+      position: absolute;
+      top: 18px;
+      right: 18px;
+      font-size: 18px;
+      color: #f4f0ea;
+      background: rgba(0, 0, 0, 0.45);
+      border-radius: 999px;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+
     /* 위로 끌어서 새로고침 표시 */
     .pull-indicator {
       position: absolute;
@@ -506,8 +544,8 @@
 
     .bubble-menu {
       position: absolute;
-      right: -6px;
-      top: 22px;
+      right: 0;
+      top: -28px;               /* 말풍선 위로 띄우기 */
       display: none;
       background: rgba(45, 50, 46, 0.9); /* 기본: 상대 메시지용 */
       border-radius: 999px;
@@ -517,10 +555,11 @@
       white-space: nowrap;
       gap: 4px;
       align-items: center;
+      z-index: 20;              /* 버블보다 위로 */
     }
     .msg-row.me .bubble-menu {
-      left: -2px;
-      right: auto;
+      left: auto;
+      right: 0;
       background: rgb(21, 21, 21); /* 내 메시지용: 더 진한 배경 */
     }
 
@@ -844,7 +883,10 @@
       </div>
     </section>
   </div>
-
+  <div class="image-viewer-overlay" id="imageViewer">
+    <button type="button" class="image-viewer-close" id="imageViewerClose">✕</button>
+    <img id="imageViewerImg" alt="attachment preview" />
+  </div>
   <script>
     const messagesInner = document.getElementById("messagesInner");
     const pinCapsule = document.getElementById("pinCapsule");
@@ -863,6 +905,30 @@
     const bodyEl = document.body;
     const bgImageInput = document.getElementById("bgImageInput");
     const bgChangeBtn = document.getElementById("bgChangeBtn");
+        const imageViewer = document.getElementById("imageViewer");
+    const imageViewerImg = document.getElementById("imageViewerImg");
+    const imageViewerClose = document.getElementById("imageViewerClose");
+
+    function openImageViewer(url) {
+      if (!imageViewer || !imageViewerImg || !url) return;
+      imageViewerImg.src = url;
+      imageViewer.classList.add("show");
+    }
+
+    if (imageViewer) {
+      imageViewer.addEventListener("click", (e) => {
+        // 배경(검은 영역)을 탭하면 닫히게
+        if (e.target === imageViewer) {
+          imageViewer.classList.remove("show");
+        }
+      });
+    }
+
+    if (imageViewerClose) {
+      imageViewerClose.addEventListener("click", () => {
+        imageViewer.classList.remove("show");
+      });
+    }
 
     const TYPING_ROW_ID = "assistant-typing";
 
@@ -1449,7 +1515,7 @@
             img.alt = att.name || "image";
             // 클릭 시 새 탭으로 크게 보기
             img.addEventListener("click", () => {
-              window.open(att.url, "_blank");
+              openImageViewer(att.url);
             });
             chip.appendChild(img);
           } else {
