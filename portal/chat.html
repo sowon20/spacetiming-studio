@@ -49,48 +49,18 @@
       font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
       color: var(--text-main);
       -webkit-text-size-adjust: 100%;
-      background-color: #000000; /* 배경은 고정 div가 담당 */
-    }
-
-    html {
-      background: transparent;
-    }
-
-    body {
-      background: transparent;
+      background: #000000; /* 전체 기본 배경은 검정 */
     }
 
     body.app-bg-forest {
-      position: relative; /* 배경은 고정 div가 담당하므로 여기서는 레이아웃만 유지 */
-    }
-
-    /* 화면 전체를 덮는 고정 배경 레이어 (노치 포함) */
-    #fixed-background {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
       background-image: url("/static/backgrounds/forest_book.jpg");
       background-size: cover;
       background-position: center;
       background-repeat: no-repeat;
+      position: relative;
+      min-height: 100vh;
     }
-
-    #fixed-background::after {
-      content: "";
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: calc(env(safe-area-inset-top) + 80px);
-      background: linear-gradient(
-        to bottom,
-        rgba(6, 7, 6, 0.4),
-        rgba(6, 7, 6, 0.0)
-      );
-      pointer-events: none;
-    }
+    /* Ensure no body.app-bg-forest::before exists */
 
     .app {
       height: calc(var(--vh) * 100); /* 실제 뷰포트 높이에 맞춰 키보드 등장 시에도 자연스럽게 줄어들도록 */
@@ -779,7 +749,6 @@
   </style>
 </head>
 <body class="app-bg-forest">
-  <div id="fixed-background"></div>
   <div class="app">
     <input type="file" id="bgImageInput" accept="image/*" style="display:none" />
     <!-- 상단 세이지 패널 -->
@@ -883,7 +852,6 @@
     const bodyEl = document.body;
     const bgImageInput = document.getElementById("bgImageInput");
     const bgChangeBtn = document.getElementById("bgChangeBtn");
-    const bgEl = document.getElementById("fixed-background");
 
     const TYPING_ROW_ID = "assistant-typing";
 
@@ -927,7 +895,7 @@
     }
 
     // 배경 이미지 변경: 아이폰 사진첩에서 선택해서 현재 세션 배경으로 사용
-    if (bgChangeBtn && bgImageInput && bgEl) {
+    if (bgChangeBtn && bgImageInput && bodyEl) {
       bgChangeBtn.addEventListener("click", () => {
         bgImageInput.click();
       });
@@ -954,8 +922,11 @@
         const url = URL.createObjectURL(file);
         currentBgObjectUrl = url;
 
-        // 고정 배경 div에 선택한 이미지를 적용 (노치 포함 전체 화면)
-        bgEl.style.backgroundImage = `url("${url}")`;
+        // body 배경을 선택한 이미지로 교체
+        bodyEl.style.backgroundImage = `url("${url}")`;
+        bodyEl.style.backgroundSize = "cover";
+        bodyEl.style.backgroundPosition = "center";
+        bodyEl.style.backgroundRepeat = "no-repeat";
 
         // 같은 파일 다시 선택해도 change 이벤트가 뜨도록 초기화
         input.value = "";
