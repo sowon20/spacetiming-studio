@@ -8,7 +8,9 @@ from director_core.prompt_assembler import assemble_director_prompt
 from director_core.recent_context import RecentContext
 
 import os
+from pathlib import Path
 import google.generativeai as genai
+from PIL import Image as PILImage
 
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")  # 실제 모델 이름에 맞게 수정 가능
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
@@ -48,11 +50,13 @@ class AttachmentMeta(BaseModel):
     name: str
     type: Optional[str] = None
     size: Optional[int] = None
+    url: Optional[str] = None
 
 
 class ChatRequest(BaseModel):
     messages: List[ChatMessage]
     attachments: Optional[List[AttachmentMeta]] = None
+    upload_profile: Optional[str] = None
 
 
 class ChatResponse(BaseModel):
@@ -88,10 +92,29 @@ async def chat(req: "ChatRequest"):
         attachments=[a.model_dump() for a in (req.attachments or [])] or None,
     )
 
-    # 4) Gemini 호출
+    # 4) Gemini 호출 (이미지가 있으면 함께 넘김)
     try:
         model = genai.GenerativeModel(GEMINI_MODEL)
-        resp = model.generate_content(final_prompt)
+
+        image_parts = []
+        for att in req.attachments or []:
+            if att.type and att.type.startswith("image/") and att.url:
+                rel = att.url.lstrip("/")  # 예: uploads/local_default/...
+                img_path = Path(rel)
+                if img_path.is_file():
+                    try:
+                        img = PILImage.open(img_path)
+                        image_parts.append(img)
+                    except Exception:
+                        # 이미지 하나 실패해도 나머지 흐름은 계속
+                        continue
+
+        if image_parts:
+            contents = image_parts + [final_prompt]
+            resp = model.generate_content(contents)
+        else:
+            resp = model.generate_content(final_prompt)
+
         reply_text = resp.text.strip() if hasattr(resp, "text") else str(resp)
     except Exception as e:
         reply_text = f"부감독 뇌 연결 중 오류가 있었어. (세부: {e})"
