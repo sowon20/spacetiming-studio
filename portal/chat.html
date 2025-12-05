@@ -1486,16 +1486,26 @@
         }
       }
 
-      // 타임스탬프 기준으로 오래된 것 → 최신 순으로 정렬
+      // 타임스탬프 기준으로 오래된 것 → 최신 순으로 정렬 (같은 시각이면 원래 순서 유지)
       if (merged.length) {
-        merged.sort((a, b) => {
+        // 정렬 전 원래 순서를 기억해서, 같은 시각일 땐 기존 순서를 유지
+        const withOrder = merged.map((m, idx) => ({ ...m, _order: idx }));
+
+        withOrder.sort((a, b) => {
           const ta = a.timestamp ?? 0;
           const tb = b.timestamp ?? 0;
           // 문자열(ISO)인 경우에도 Date 비교로 보정
           const da = typeof ta === "string" ? new Date(ta).getTime() : ta;
           const db = typeof tb === "string" ? new Date(tb).getTime() : tb;
+
+          if (da === db) {
+            return a._order - b._order;
+          }
           return da - db;
         });
+
+        // _order는 저장하지 않고 버림
+        merged = withOrder.map(({ _order, ...rest }) => rest);
       }
 
       chatHistory = merged;
