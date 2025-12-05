@@ -694,6 +694,41 @@
     let chatHistory = [];
     let pendingAttachments = [];
 
+    async function fetchServerHistory(limit = 200) {
+      try {
+        const resp = await fetch(`/api/history?limit=${limit}`);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const data = await resp.json();
+
+        // 지원 형태: [ {..}, {..} ] 또는 { messages: [..] }
+        const raw = Array.isArray(data)
+          ? data
+          : Array.isArray(data?.messages)
+          ? data.messages
+          : [];
+
+        return raw.map((item, idx) => {
+          const ts =
+            item.timestamp !== undefined && item.timestamp !== null
+              ? item.timestamp
+              : item.time !== undefined
+              ? item.time
+              : null;
+          return {
+            id:
+              item.id ||
+              String(ts || Date.now()) + "_" + idx.toString(),
+            role: item.role || "assistant",
+            content: item.content || "",
+            timestamp: ts,
+          };
+        });
+      } catch (e) {
+        console.warn("server history failed", e);
+        return [];
+      }
+    }
+
     function loadHistory() {
       try {
         const raw = localStorage.getItem(STORAGE_KEY);
@@ -716,9 +751,33 @@
     }
 
     function formatTime(ts) {
-      const d = ts ? new Date(ts) : new Date();
-      const hh = String(d.getHours()).padStart(2, "0");
-      const mm = String(d.getMinutes()).padStart(2, "0");
+      // 서버에서 오는 HH:MM 문자열인 경우
+      if (typeof ts === "string") {
+        if (ts.length >= 5 && ts[2] === ":") {
+          return ts.slice(0, 5);
+        }
+        const dFromStr = new Date(ts);
+        if (!isNaN(dFromStr.getTime())) {
+          const hh = String(dFromStr.getHours()).padStart(2, "0");
+          const mm = String(dFromStr.getMinutes()).padStart(2, "0");
+          return `${hh}:${mm}`;
+        }
+      }
+
+      // 숫자 타임스탬프(Date.now())인 경우
+      if (typeof ts === "number") {
+        const d = new Date(ts);
+        if (!isNaN(d.getTime())) {
+          const hh = String(d.getHours()).padStart(2, "0");
+          const mm = String(d.getMinutes()).padStart(2, "0");
+          return `${hh}:${mm}`;
+        }
+      }
+
+      // 그 외(없거나 이상한 값)는 현재 시각으로 대체
+      const now = new Date();
+      const hh = String(now.getHours()).padStart(2, "0");
+      const mm = String(now.getMinutes()).padStart(2, "0");
       return `${hh}:${mm}`;
     }
 
@@ -911,13 +970,20 @@
       messagesInner.appendChild(row);
     }
 
-    function renderHistoryFromStorage() {
-      chatHistory = loadHistory();
-      if (!chatHistory.length) {
-        return;
+    async function renderHistory() {
+      // 1순위: 서버 공용 히스토리
+      let msgs = await fetchServerHistory(200);
+
+      // 서버에 아직 기록이 없다면 → 예전 localStorage 백업 사용
+      if (!msgs.length) {
+        msgs = loadHistory();
       }
+
+      chatHistory = msgs;
       messagesInner.innerHTML = "";
       chatHistory.forEach((msg) => appendMessageToDOM(msg));
+      // 서버 기준으로 localStorage도 덮어써서 백업처럼 사용
+      saveHistory();
       scrollToBottom();
     }
 
@@ -1193,8 +1259,8 @@
         .forEach((m) => m.classList.remove("show"));
     });
 
-    // 페이지 로드 시 저장된 대화 불러오기
-    renderHistoryFromStorage();
+    // 페이지 로드 시 서버 기준으로 대화 불러오기
+    renderHistory();
   </script>
 </body>
 </html>
