@@ -48,9 +48,13 @@
       overflow-y: auto; /* 페이지 전체도 약간은 스크롤 가능하게 (키보드가 올라와도 상단 패널을 다시 볼 수 있도록) */
       overflow-x: hidden;
       font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-      background: var(--bg-cream);
       color: var(--text-main);
       -webkit-text-size-adjust: 100%;
+    }
+
+    /* 노치 뒤 배경은 html이 먹기 때문에, html은 어두운 색으로 고정 */
+    html {
+      background: #050605;
     }
 
     body {
