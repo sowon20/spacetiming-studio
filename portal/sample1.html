@@ -1,0 +1,1828 @@
+<!doctype html>
+<!--
+  chat.html
+  - 시공간 스튜디오 포털 메인 화면
+  - 프론트 로직: portal/app.js
+  - 백엔드: app.py (/api/chat, /api/history)
+  - 상단 API 사용량 바/퍼센트 값은 현재는 시각적 장식용이며, 실제 사용량과는 연동되지 않는다.
+-->
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <title>Sowon · Chat Portal</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <!-- iOS 홈 화면 / 풀스크린용 메타 -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Spacetime Director" />
+  <!-- (선택) 아이콘 파일이 있을 경우 이 경로에 두면 홈화면 아이콘 사용 가능 -->
+  <link rel="apple-touch-icon" href="/static/icons/app-icon-192.png" />
+  <meta name="theme-color" content="#1a1c1a" />
+  <style>
+    :root {
+      --vh: 1vh;
+      --bg-cream: #f4f0ea;
+      --bg-cream-soft: #efe9e0;
+      --sage-deep: #323732;
+      --sage-mid: #3d433e;
+      --sage-soft: #5a635b;
+      --sand-deep: #8b7965;
+      --text-main: #262522;
+      --text-soft: #96938e;
+      --text-softer: #aaa7a2;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      overflow-y: auto; /* 페이지 전체도 약간은 스크롤 가능하게 (키보드가 올라와도 상단 패널을 다시 볼 수 있도록) */
+      overflow-x: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+      color: var(--text-main);
+      -webkit-text-size-adjust: 100%;
+      background-color: #000000; /* 배경은 고정 div가 담당 */
+    }
+
+    html {
+      background: transparent;
+    }
+
+    body {
+      background: transparent;
+    }
+
+    body.app-bg-forest {
+      position: relative; /* 배경은 고정 div가 담당하므로 여기서는 레이아웃만 유지 */
+    }
+
+    /* 화면 전체를 덮는 고정 배경 레이어 (노치 포함) */
+    #fixed-background {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background-image: url("/static/backgrounds/forest_book.jpg");
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+    }
+
+    #fixed-background::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: calc(env(safe-area-inset-top) + 80px);
+      background: linear-gradient(
+        to bottom,
+        rgba(6, 7, 6, 0.4),
+        rgba(6, 7, 6, 0.0)
+      );
+      pointer-events: none;
+    }
+
+    .app {
+      height: calc(var(--vh) * 100); /* 실제 뷰포트 높이에 맞춰 키보드 등장 시에도 자연스럽게 줄어들도록 */
+      padding: calc(env(safe-area-inset-top) - 4px) 12px calc(12px + env(safe-area-inset-bottom));
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* 상단 패널 */
+
+    .top-panel {
+      background: rgba(12, 14, 12, 0.72);
+      border-radius: 18px;
+      padding: 10px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      color: #e8e3db;
+      backdrop-filter: blur(16px) saturate(140%);
+      -webkit-backdrop-filter: blur(16px) saturate(140%);
+      box-shadow: 0 18px 40px rgba(5, 7, 6, 0.55);
+      transition: max-height 0.25s ease, opacity 0.25s ease, background-color 0.2s ease, padding 0.2s ease, gap 0.2s ease;
+      margin-top: -6px; /* 그라데이션 속으로 살짝 파묻혀 보이게 */
+      cursor: pointer;
+    }
+
+    /* 상단 패널이 확장 상태일 때 (기본보다 조금 더 넓게) */
+    .top-panel.expanded {
+      padding: 14px 16px;
+      gap: 10px;
+    }
+
+
+    .top-panel-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .top-title-main {
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .top-title-sub {
+      font-size: 11px;
+      opacity: 0.8;
+      margin-top: 2px;
+    }
+
+    .status-pill {
+      font-size: 11px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(10, 12, 10, 0.32);
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: #4bd37b;
+    }
+
+    .api-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      opacity: 0.9;
+    }
+
+    .api-label {
+      opacity: 0.75;
+    }
+
+    .api-bar-wrap {
+      flex: 1;
+      height: 4px;
+      border-radius: 999px;
+      background: rgba(230, 224, 214, 0.22);
+      overflow: hidden;
+    }
+
+    .api-bar {
+      height: 100%;
+      width: 32%;
+      background: #e8e3db;
+    }
+
+    .top-actions {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .icon-btn {
+      border: none;
+      outline: none;
+      width: 40px;
+      height: 40px;
+      border-radius: 999px;
+      background: rgba(10, 10, 10, 0.4);
+      color: #f5f2ec;
+      font-size: 17px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      padding: 0;
+    }
+
+    .icon-btn span {
+      display: none;
+    }
+
+    .icon-btn:active {
+      transform: scale(0.97);
+    }
+
+    /* 핀 캡슐 */
+
+    .pin-strip {
+      min-height: 0;
+    }
+
+    .pin-capsule {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 6px 10px;
+      border-radius: 10px;
+      background: rgba(60, 67, 62, 0.22);
+      font-size: 11px;
+      color: #f2ede5;
+    }
+
+    .pin-capsule-main {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .pin-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: #f7e3a2;
+      flex-shrink: 0;
+    }
+
+    .pin-text {
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      overflow: hidden;
+    }
+
+    .pin-close {
+      border: none;
+      outline: none;
+      background: none;
+      color: #d9d3c8;
+      font-size: 13px;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .pin-close:active {
+      transform: scale(0.9);
+    }
+
+    /* 메시지 영역 */
+
+    .messages {
+      flex: 1 1 auto;
+      min-height: 0;
+      padding: 8px 4px;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.16);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      overflow-y: auto;
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+      font-size: 13px;
+      position: relative;
+    }
+    /* 위로 끌어서 새로고침 표시 */
+    .pull-indicator {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 10px;
+      text-align: center;
+      font-size: 11px;
+      padding: 4px 0;
+      color: var(--text-soft);
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity 0.15s ease, transform 0.15s ease, color 0.15s ease;
+      pointer-events: none;
+    }
+
+    .pull-indicator.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .pull-indicator.ready {
+      color: #f7e3a2;
+    }
+    .messages-inner {
+      padding: 4px 4px 72px;
+    }
+
+    .msg-row {
+      display: flex;
+      margin-bottom: 6px;
+    }
+
+    .msg-row.other {
+      justify-content: flex-start;
+    }
+
+    .msg-row.me {
+      justify-content: flex-end;
+    }
+
+    .bubble-wrap {
+      max-width: 78%;
+      position: relative;
+      display: inline-flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 2px;
+    }
+
+    .bubble {
+      position: relative;
+      padding: 8px 10px;
+      border-radius: 18px;
+      font-size: 13px;
+      line-height: 1.4;
+      word-break: break-word;
+      white-space: pre-wrap; /* Shift+Enter 줄바꿈 그대로 보여주기 */
+      transition: transform 0.08s ease-out, background-color 0.08s ease-out;
+    }
+
+    .bubble.other {
+      background: var(--bg-cream-soft);
+      color: var(--text-main);
+      border-bottom-left-radius: 6px;
+    }
+
+    .bubble.me {
+      background: var(--sage-mid);
+      color: #f3eee5;
+      border-bottom-right-radius: 6px;
+    }
+
+    .bubble.press-feedback {
+      transform: scale(0.985);
+    }
+
+    .msg-row.other .bubble.press-feedback {
+      background-color: rgba(239, 233, 224, 0.96);
+    }
+
+    .msg-row.me .bubble.press-feedback {
+      background-color: #4a534b;
+    }
+
+    .bubble.typing {
+      opacity: 0.9;
+      letter-spacing: 0;
+    }
+
+    .typing-dots {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+    }
+
+    .typing-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: currentColor;
+      opacity: 0.25;
+      animation: typingBlink 1s infinite ease-in-out;
+    }
+
+    .typing-dot:nth-child(2) {
+      animation-delay: 0.15s;
+    }
+
+    .typing-dot:nth-child(3) {
+      animation-delay: 0.3s;
+    }
+
+    @keyframes typingBlink {
+      0% {
+        opacity: 0.2;
+        transform: translateY(0);
+      }
+      30% {
+        opacity: 0.9;
+        transform: translateY(-1px);
+      }
+      60% {
+        opacity: 0.4;
+        transform: translateY(0);
+      }
+      100% {
+        opacity: 0.2;
+        transform: translateY(0);
+      }
+    }
+
+
+    .bubble-meta {
+      font-size: 10px;
+      color: #d6d2cc;
+      align-self: flex-end;
+      padding: 0 2px;
+    }
+
+    .msg-row.other .bubble-meta {
+      align-self: flex-start;
+      padding-left: 2px;
+    }
+
+    .msg-row.me .bubble-meta {
+      align-self: flex-end;
+      padding-right: 2px;
+    }
+
+    /* 말풍선 메뉴 */
+
+    .bubble-menu-toggle {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-100%);
+      width: 10px;
+      height: 10px;
+      border: none;
+      border-radius: 999px;
+      background: transparent;
+      padding: 0;
+      font-size: 0;
+      opacity: 0;
+      pointer-events: none; /* 말풍선 롱프레스 메뉴로 대체 */
+    }
+    .bubble.has-attachments {
+      border: 1px solid rgba(255, 255, 255, 0.18); /* 첨부가 있는 버블만 살짝 테두리 */
+    }
+
+    .msg-row.other .bubble.has-attachments {
+      border-color: rgba(0, 0, 0, 0.08);
+    }
+
+    .bubble-attachments {
+      margin-top: 6px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+
+    .bubble-attachment {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 6px;
+      border-radius: 999px;
+      font-size: 11px;
+    }
+
+    .msg-row.other .bubble-attachment {
+      background: rgba(0, 0, 0, 0.03);
+      color: var(--text-soft);
+    }
+
+    .msg-row.me .bubble-attachment {
+      background: rgba(255, 255, 255, 0.12);
+      color: #f5f2ec;
+    }
+
+    .bubble-attachment-icon {
+      font-size: 11px;
+      flex-shrink: 0;
+    }
+
+    .bubble-attachment-name {
+      max-width: 140px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .msg-row.other .bubble-menu-toggle {
+      right: -14px;
+      left: auto;
+      color: var(--bg-cream-soft); /* same tone as assistant bubble */
+    }
+
+    .msg-row.me .bubble-menu-toggle {
+      left: -14px;
+      right: auto;
+      color: var(--sage-mid); /* same tone as my bubble */
+    }
+
+    .bubble-menu-toggle:active {
+      opacity: 0.8; /* 살짝만 눌리는 느낌, 위치는 그대로 */
+    }
+
+    .bubble-menu {
+      position: absolute;
+      right: -6px;
+      top: 22px;
+      display: none;
+      background: rgba(45, 50, 46, 0.9); /* 기본: 상대 메시지용 */
+      border-radius: 999px;
+      padding: 3px 6px;
+      font-size: 11px;
+      color: #f2eee5;
+      white-space: nowrap;
+      gap: 4px;
+      align-items: center;
+    }
+    .msg-row.me .bubble-menu {
+      left: -2px;
+      right: auto;
+      background: rgb(21, 21, 21); /* 내 메시지용: 더 진한 배경 */
+    }
+
+    .bubble-menu.show {
+      display: inline-flex;
+    }
+
+    .bubble-menu button {
+      border: none;
+      background: none;
+      padding: 3px 4px;
+      border-radius: 999px;
+      color: inherit;
+      cursor: pointer;
+    }
+
+    .bubble-menu button:active {
+      transform: scale(0.9);
+    }
+
+    /* 작성 영역 */
+
+    .composer {
+      flex: 0 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .attach-strip {
+      display: none;
+      padding: 6px 0;
+      border-radius: 10px;
+      background: transparent;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .attach-strip-inner {
+      display: inline-flex;
+      gap: 8px;
+    }
+
+    .attach-pill {
+      width: 80px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 11px;
+    }
+
+    .attach-thumb {
+      position: relative;
+      width: 100%;
+      padding-top: 100%; /* 정사각형 */
+      border-radius: 12px;
+      background: rgba(244, 240, 234, 0.96);
+      overflow: hidden;
+    }
+    .attach-thumb img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .attach-remove {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      width: 18px;
+      height: 18px;
+      border-radius: 999px;
+      border: none;
+      background: rgba(0, 0, 0, 0.5);
+      color: #f8f4ed;
+      font-size: 11px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    .attach-title {
+      display: none;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      overflow: hidden;
+      text-align: center;
+      color: var(--text-main);
+    }
+
+    .composer-hint {
+      font-size: 10px;
+      color: var(--text-soft);
+      padding: 0 2px;
+    }
+
+    .upload-profile-row {
+      font-size: 10px;
+      color: var(--text-soft);
+      padding: 0 2px 2px;
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .upload-profile-row label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .upload-profile-row select {
+      font-size: 10px;
+      border-radius: 999px;
+      padding: 2px 8px;
+      border: none;
+      outline: none;
+      background: rgba(244, 240, 234, 0.9);
+      color: var(--text-main);
+    }
+
+    .composer-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .attach-btn {
+      width: 30px;
+      height: 30px;
+      border-radius: 999px;
+      border: none;
+      outline: none;
+      background: rgba(244, 240, 234, 0.98); /* 거의 흰색 */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 17px;
+      cursor: pointer;
+      color: var(--sage-mid);
+      flex-shrink: 0;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.12);
+    }
+
+    .attach-btn:active {
+      transform: scale(0.95);
+    }
+
+    .input-shell {
+      flex: 1 1 auto;
+      display: flex;
+      align-items: center;
+      padding: 6px 8px 6px 10px;
+      border-radius: 16px;
+      background: rgba(244, 240, 234, 0.9);
+    }
+
+    textarea.input {
+      flex: 1;
+      border: none;
+      background: transparent;
+      resize: none;
+      outline: none;
+      font: inherit;
+      font-size: 16px;
+      line-height: 1.4;
+      max-height: 88px;
+      color: var(--text-main);
+    }
+
+    .send-btn {
+      border: none;
+      outline: none;
+      margin-left: 6px;
+      width: 28px;
+      height: 28px;
+      border-radius: 999px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      background: var(--sage-mid);
+      color: #f3eee5;
+      font-size: 14px;
+    }
+
+    .send-btn:active {
+      transform: scale(0.95);
+    }
+
+    @media (min-width: 768px) {
+      .app {
+        max-width: 480px;
+        margin: 0 auto;
+      }
+    }
+    .messages::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .messages::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .messages::-webkit-scrollbar-thumb {
+      background: rgba(90, 99, 91, 0.55);
+      border-radius: 999px;
+    }
+
+    .messages {
+      scrollbar-width: thin;
+      scrollbar-color: rgba(90, 99, 91, 0.55) transparent;
+    }
+    /* 가로 모드에서는 전체 앱 숨기고 경고만 표시 */
+.landscape-warning {
+  display: none;
+}
+
+@media (orientation: landscape) and (max-width: 900px) {
+  .app {
+    display: none;
+  }
+
+  .landscape-warning {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    background: rgba(10, 10, 10, 0.9);
+    color: #f4f0ea;
+    font-size: 14px;
+    text-align: center;
+  }
+}
+  </style>
+</head>
+<body class="app-bg-forest">
+  <div id="fixed-background"></div>
+  <div class="app">
+    <input type="file" id="bgImageInput" accept="image/*" style="display:none" />
+    <!-- 상단 세이지 패널 -->
+    <header class="top-panel">
+      <div class="top-panel-row">
+        <div>
+          <div class="top-title-main">SPACETIME DIRECTOR</div>
+          <div class="top-title-sub">부감독 · 개인 세션</div>
+        </div>
+        <div class="top-actions">
+          <div class="status-pill">
+            <span class="status-dot"></span>
+            <span>ONLINE</span>
+          </div>
+          <button class="icon-btn" type="button" id="bgChangeBtn">
+            🎨<span>BG</span>
+          </button>
+          <button class="icon-btn" type="button">
+            📞<span>Call</span>
+          </button>
+        </div>
+      </div>
+      <div class="api-row">
+        <div class="api-label">API 사용량</div>
+        <div class="api-bar-wrap">
+          <div class="api-bar" id="apiBar"></div>
+        </div>
+        <div class="api-label" id="apiLabel">32%</div>
+      </div>
+    </header>
+
+    <!-- 핀 캡슐 영역 -->
+    <section class="pin-strip">
+      <div class="pin-capsule" id="pinCapsule">
+        <div class="pin-capsule-main">
+          <div class="pin-dot"></div>
+          <div class="pin-text" id="pinText">핀 된 메시지가 여기에 요약돼요.</div>
+        </div>
+        <button class="pin-close" type="button" id="pinClearBtn">✕</button>
+      </div>
+    </section>
+
+    <!-- 메시지 영역 -->
+    <main class="messages" id="messages">
+      <div class="messages-inner" id="messagesInner">
+        <!-- 실제 메시지는 JS에서 렌더링 -->
+      </div>
+      <div class="pull-indicator" id="pullIndicator">↑ 올려서 새로고침</div>
+    </main>
+
+    <!-- 입력 영역 -->
+    <section class="composer">
+      <input type="file" id="fileInput" multiple style="display:none" />
+      <!-- 첨부 미리보기 (현재는 로컬 미리보기 전용, 실제 업로드는 app.js TODO 참고) -->
+      <div class="attach-strip" id="attachStrip">
+        <div class="attach-strip-inner" id="attachStripInner">
+          <!-- JS로 채워짐 -->
+        </div>
+      </div>
+
+      <div class="upload-profile-row">
+        <label>
+          저장 위치
+          <select id="uploadProfileSelect">
+            <option value="local_default">기본 (로컬)</option>
+            <option value="gdrive_main">구글 드라이브 (메인)</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="composer-row">
+        <button class="attach-btn" type="button" id="attachBtn">＋</button>
+        <div class="input-shell">
+          <textarea
+            id="input"
+            class="input"
+            rows="1"
+            placeholder="메시지 입력…"
+          ></textarea>
+          <button class="send-btn" type="button" id="sendBtn">➤</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const messagesInner = document.getElementById("messagesInner");
+    const pinCapsule = document.getElementById("pinCapsule");
+    const pinText = document.getElementById("pinText");
+    const pinClearBtn = document.getElementById("pinClearBtn");
+    const inputEl = document.getElementById("input");
+    const sendBtn = document.getElementById("sendBtn");
+    const attachBtn = document.getElementById("attachBtn");
+    const attachStrip = document.getElementById("attachStrip");
+    const attachStripInner = document.getElementById("attachStripInner");
+    const fileInput = document.getElementById("fileInput");
+    const messagesEl = document.getElementById("messages");
+    const pullIndicator = document.getElementById("pullIndicator");
+    const uploadProfileSelect = document.getElementById("uploadProfileSelect");
+
+    const bodyEl = document.body;
+    const bgImageInput = document.getElementById("bgImageInput");
+    const bgChangeBtn = document.getElementById("bgChangeBtn");
+    const bgEl = document.getElementById("fixed-background");
+
+    const TYPING_ROW_ID = "assistant-typing";
+
+    const STORAGE_KEY = "director_chat_messages_v2";
+    const UPLOAD_PROFILE_KEY = "director_upload_profile";
+    let uploadProfile = "local_default";
+    let chatHistory = [];
+    let pendingAttachments = [];
+    const INITIAL_HISTORY_BATCH = 40;
+    const HISTORY_PAGE_SIZE = 40;
+    let visibleStartIndex = 0;
+    let isLoadingOlder = false;
+    let currentBgObjectUrl = null;
+
+    // 뷰포트 높이 동기화: 키보드가 올라와도 .app 높이를 실제 화면에 맞게 조정
+    function updateViewportHeight() {
+      const vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty("--vh", `${vh}px`);
+    }
+
+    updateViewportHeight();
+    window.addEventListener("resize", updateViewportHeight);
+    window.addEventListener("orientationchange", updateViewportHeight);
+
+    // 업로드 프로필 초기화 (localStorage에서 불러오기)
+    if (uploadProfileSelect) {
+      const savedProfile = localStorage.getItem(UPLOAD_PROFILE_KEY);
+      if (savedProfile) {
+        uploadProfile = savedProfile;
+      }
+      uploadProfileSelect.value = uploadProfile;
+      uploadProfileSelect.addEventListener("change", (e) => {
+        const value = e.target.value || "local_default";
+        uploadProfile = value;
+        try {
+          localStorage.setItem(UPLOAD_PROFILE_KEY, uploadProfile);
+        } catch (_) {
+          // ignore
+        }
+      });
+    }
+
+    // 배경 이미지 변경: 아이폰 사진첩에서 선택해서 현재 세션 배경으로 사용
+    if (bgChangeBtn && bgImageInput && bgEl) {
+      bgChangeBtn.addEventListener("click", () => {
+        bgImageInput.click();
+      });
+
+      bgImageInput.addEventListener("change", (e) => {
+        const input = e.target;
+        const file = input.files && input.files[0];
+        if (!file || !file.type || !file.type.startsWith("image/")) {
+          // 이미지가 아니면 무시
+          input.value = "";
+          return;
+        }
+
+        // 이전 배경 URL 정리
+        if (currentBgObjectUrl) {
+          try {
+            URL.revokeObjectURL(currentBgObjectUrl);
+          } catch (_) {
+            // ignore
+          }
+          currentBgObjectUrl = null;
+        }
+
+        const url = URL.createObjectURL(file);
+        currentBgObjectUrl = url;
+
+        // 고정 배경 div에 선택한 이미지를 적용 (노치 포함 전체 화면)
+        bgEl.style.backgroundImage = `url("${url}")`;
+
+        // 같은 파일 다시 선택해도 change 이벤트가 뜨도록 초기화
+        input.value = "";
+      });
+    }
+
+    // 상단 패널 확장/기본 토글 (기본: 지금 크기, 클릭 시 조금 더 넓게)
+    const topPanel = document.querySelector(".top-panel");
+    if (topPanel) {
+      let isTopPanelExpanded = false;
+      topPanel.addEventListener("click", (e) => {
+        // 아이콘 버튼(배경/전화)을 누를 때는 토글 막기
+        if (e.target.closest(".icon-btn")) {
+          return;
+        }
+        isTopPanelExpanded = !isTopPanelExpanded;
+        if (isTopPanelExpanded) {
+          topPanel.classList.add("expanded");
+        } else {
+          topPanel.classList.remove("expanded");
+        }
+      });
+    }
+
+    async function fetchServerHistory(limit = 200) {
+      try {
+        const resp = await fetch(`/api/history?limit=${limit}`);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const data = await resp.json();
+
+        // 지원 형태: [ {..}, {..} ] 또는 { messages: [..] }
+        const raw = Array.isArray(data)
+          ? data
+          : Array.isArray(data?.messages)
+          ? data.messages
+          : [];
+
+        return raw.map((item, idx) => {
+          const ts =
+            item.timestamp !== undefined && item.timestamp !== null
+              ? item.timestamp
+              : item.time !== undefined
+              ? item.time
+              : null;
+          return {
+            id:
+              item.id ||
+              String(ts || Date.now()) + "_" + idx.toString(),
+            role: item.role || "assistant",
+            content: item.content || "",
+            timestamp: ts,
+          };
+        });
+      } catch (e) {
+        console.warn("server history failed", e);
+        return [];
+      }
+    }
+
+    function loadHistory() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return [];
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed)) return [];
+        return parsed;
+      } catch (e) {
+        console.warn("chat history load failed", e);
+        return [];
+      }
+    }
+
+    function saveHistory() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(chatHistory));
+      } catch (e) {
+        console.warn("chat history save failed", e);
+      }
+    }
+
+    function formatTime(ts) {
+      // 서버에서 오는 HH:MM 문자열인 경우
+      if (typeof ts === "string") {
+        if (ts.length >= 5 && ts[2] === ":") {
+          return ts.slice(0, 5);
+        }
+        const dFromStr = new Date(ts);
+        if (!isNaN(dFromStr.getTime())) {
+          const hh = String(dFromStr.getHours()).padStart(2, "0");
+          const mm = String(dFromStr.getMinutes()).padStart(2, "0");
+          return `${hh}:${mm}`;
+        }
+      }
+
+      // 숫자 타임스탬프(Date.now())인 경우
+      if (typeof ts === "number") {
+        const d = new Date(ts);
+        if (!isNaN(d.getTime())) {
+          const hh = String(d.getHours()).padStart(2, "0");
+          const mm = String(d.getMinutes()).padStart(2, "0");
+          return `${hh}:${mm}`;
+        }
+      }
+
+      // 그 외(없거나 이상한 값)는 현재 시각으로 대체
+      const now = new Date();
+      const hh = String(now.getHours()).padStart(2, "0");
+      const mm = String(now.getMinutes()).padStart(2, "0");
+      return `${hh}:${mm}`;
+    }
+
+    function createMessage(role, content, timestamp, attachments) {
+      return {
+        id: Date.now().toString() + Math.random().toString(16).slice(2),
+        role,
+        content,
+        timestamp: timestamp ?? Date.now(),
+        attachments: Array.isArray(attachments) ? attachments : [],
+      };
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    // 아주 가벼운 인라인 마크다운: **bold**, *italic*, `code`
+    function renderContent(raw) {
+      if (!raw) return "";
+      let text = escapeHtml(raw);
+
+      // bold: **text**
+      text = text.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+      // italic: *text*
+      text = text.replace(/\*(.+?)\*/g, "<em>$1</em>");
+      // inline code: `code`
+      text = text.replace(/`([^`]+)`/g, "<code>$1</code>");
+
+      return text;
+    }
+
+    function truncateFileName(name, maxLen = 24) {
+      const str = String(name || "첨부파일");
+      if (str.length <= maxLen) return str;
+      const extIndex = str.lastIndexOf(".");
+      if (extIndex > 0 && extIndex < str.length - 1) {
+        const base = str.slice(0, extIndex);
+        const ext = str.slice(extIndex);
+        if (base.length > maxLen - ext.length - 3) {
+          return base.slice(0, maxLen - ext.length - 3) + "..." + ext;
+        }
+        return base + "..." + ext;
+      }
+      return str.slice(0, maxLen - 3) + "...";
+    }
+
+    const LONG_PRESS_MS = 500;
+    const LONG_PRESS_MOVE_TOLERANCE = 10;
+    let longPressTimer = null;
+    let longPressTargetWrap = null;
+    let longPressTargetBubble = null;
+    let longPressStartX = 0;
+    let longPressStartY = 0;
+
+    let lastTapTime = 0;
+    let lastTapBubble = null;
+    const DOUBLE_TAP_MS = 350;
+
+    function openBubbleMenuForWrap(wrap) {
+      if (!wrap) return;
+      const menu = wrap.querySelector(".bubble-menu");
+      if (!menu) return;
+      const allMenus = document.querySelectorAll(".bubble-menu");
+      allMenus.forEach((m) => {
+        if (m !== menu) m.classList.remove("show");
+      });
+      menu.classList.add("show");
+    }
+
+    function cancelLongPress() {
+      if (longPressTimer) {
+        clearTimeout(longPressTimer);
+        longPressTimer = null;
+      }
+      if (longPressTargetBubble) {
+        longPressTargetBubble.classList.remove("press-feedback");
+      }
+      longPressTargetWrap = null;
+      longPressTargetBubble = null;
+    }
+
+    function handlePressStart(event) {
+      const bubble = event.target.closest(".bubble");
+      if (!bubble) return;
+      const wrap = bubble.closest(".bubble-wrap");
+      if (!wrap) return;
+
+      // 이전 롱프레스 상태 초기화
+      cancelLongPress();
+
+      longPressTargetBubble = bubble;
+      bubble.classList.add("press-feedback");
+
+      // iOS에서 텍스트 돋보기/기본 롱프레스 메뉴가 뜨지 않도록 막기
+      if (event.touches && event.cancelable) {
+        event.preventDefault();
+      }
+
+      longPressTargetWrap = wrap;
+      const point = event.touches ? event.touches[0] : event;
+      longPressStartX = point.clientX;
+      longPressStartY = point.clientY;
+
+      longPressTimer = setTimeout(() => {
+        openBubbleMenuForWrap(longPressTargetWrap);
+        longPressTimer = null;
+      }, LONG_PRESS_MS);
+    }
+
+    function handlePressMove(event) {
+      if (!longPressTimer) return;
+      const point = event.touches ? event.touches[0] : event;
+      if (!point) return;
+      const dx = Math.abs(point.clientX - longPressStartX);
+      const dy = Math.abs(point.clientY - longPressStartY);
+      if (dx > LONG_PRESS_MOVE_TOLERANCE || dy > LONG_PRESS_MOVE_TOLERANCE) {
+        cancelLongPress();
+      }
+    }
+
+    function handlePressEnd() {
+      cancelLongPress();
+    }
+
+    function handleBubbleTap(bubble) {
+      const now = Date.now();
+      if (lastTapBubble === bubble && now - lastTapTime < DOUBLE_TAP_MS) {
+        const range = document.createRange();
+        range.selectNodeContents(bubble);
+        const selection = window.getSelection();
+        if (selection) {
+          selection.removeAllRanges();
+          selection.addRange(range);
+        }
+      }
+      lastTapBubble = bubble;
+      lastTapTime = now;
+    }
+
+    function clearPendingAttachments() {
+      pendingAttachments.forEach((att) => {
+        if (att.url) {
+          URL.revokeObjectURL(att.url);
+        }
+      });
+      pendingAttachments = [];
+      attachStripInner.innerHTML = "";
+      attachStrip.style.display = "none";
+    }
+
+    function addFilesToAttachments(files) {
+      const list = Array.from(files || []);
+      if (!list.length) return;
+
+      list.forEach((file) => {
+        const id = Date.now().toString() + Math.random().toString(16).slice(2);
+        const url = URL.createObjectURL(file);
+        const isImage = file.type && file.type.startsWith("image/");
+
+        const att = { id, file, url, isImage };
+        pendingAttachments.push(att);
+
+        attachStrip.style.display = "block";
+
+        const pill = document.createElement("div");
+        pill.className = "attach-pill";
+        pill.dataset.id = id;
+
+        const thumb = document.createElement("div");
+        thumb.className = "attach-thumb";
+
+        if (isImage) {
+          const img = document.createElement("img");
+          img.src = url;
+          img.alt = file.name || "image";
+          thumb.appendChild(img);
+        } else {
+          const label = document.createElement("div");
+          label.style.position = "absolute";
+          label.style.inset = "0";
+          label.style.display = "flex";
+          label.style.alignItems = "center";
+          label.style.justifyContent = "center";
+          label.style.fontSize = "10px";
+          label.style.color = "var(--text-soft)";
+          const name = (file.name || "파일").split(".");
+          label.textContent = name.length > 1 ? name.pop().toUpperCase() : "FILE";
+          thumb.appendChild(label);
+        }
+
+        const remove = document.createElement("button");
+        remove.className = "attach-remove";
+        remove.type = "button";
+        remove.textContent = "✕";
+        remove.addEventListener("click", () => {
+          pill.remove();
+          pendingAttachments = pendingAttachments.filter((x) => {
+            if (x.id === id) {
+              if (x.url) URL.revokeObjectURL(x.url);
+              return false;
+            }
+            return true;
+          });
+          if (!attachStripInner.children.length) {
+            attachStrip.style.display = "none";
+          }
+        });
+        thumb.appendChild(remove);
+
+        const title = document.createElement("div");
+        title.className = "attach-title";
+        title.textContent = file.name || "첨부파일";
+
+        pill.appendChild(thumb);
+        pill.appendChild(title);
+        attachStripInner.appendChild(pill);
+      });
+
+      if (fileInput) {
+        fileInput.value = "";
+      }
+    }
+
+    function showTypingIndicator() {
+      if (document.getElementById(TYPING_ROW_ID)) return;
+
+      const row = document.createElement("div");
+      row.className = "msg-row other";
+      row.id = TYPING_ROW_ID;
+
+      const wrap = document.createElement("div");
+      wrap.className = "bubble-wrap";
+
+      const bubble = document.createElement("div");
+      bubble.className = "bubble other typing";
+
+      const dots = document.createElement("div");
+      dots.className = "typing-dots";
+
+      for (let i = 0; i < 3; i++) {
+        const dot = document.createElement("span");
+        dot.className = "typing-dot";
+        dots.appendChild(dot);
+      }
+
+      bubble.appendChild(dots);
+      wrap.appendChild(bubble);
+      row.appendChild(wrap);
+      messagesInner.appendChild(row);
+      scrollToBottom();
+    }
+
+    function hideTypingIndicator() {
+      const typingRow = document.getElementById(TYPING_ROW_ID);
+      if (typingRow) {
+        typingRow.remove();
+      }
+    }
+
+    function buildMessageRowElement(msg) {
+      const row = document.createElement("div");
+      row.className = "msg-row " + (msg.role === "assistant" ? "other" : "me");
+
+      const wrap = document.createElement("div");
+      wrap.className = "bubble-wrap";
+      wrap.dataset.id = msg.id;
+
+      const toggle = document.createElement("button");
+      toggle.className = "bubble-menu-toggle";
+      toggle.type = "button";
+      toggle.textContent = "⋯";
+
+      const bubble = document.createElement("div");
+      bubble.className = "bubble " + (msg.role === "assistant" ? "other" : "me");
+      bubble.innerHTML = renderContent(msg.content);
+
+      if (Array.isArray(msg.attachments) && msg.attachments.length) {
+        bubble.classList.add("has-attachments");
+        const attWrap = document.createElement("div");
+        attWrap.className = "bubble-attachments";
+
+        msg.attachments.forEach((att) => {
+          const chip = document.createElement("div");
+          chip.className = "bubble-attachment";
+
+          const icon = document.createElement("span");
+          icon.className = "bubble-attachment-icon";
+          const kind = att.kind || (att.type && att.type.startsWith("image/") ? "image" : "file");
+          icon.textContent =
+            kind === "image" ? "🖼" : kind === "video" ? "🎬" : "📎";
+
+          const label = document.createElement("span");
+          label.className = "bubble-attachment-name";
+          label.textContent = truncateFileName(att.name || "첨부파일");
+
+          chip.appendChild(icon);
+          chip.appendChild(label);
+          attWrap.appendChild(chip);
+        });
+
+        bubble.appendChild(attWrap);
+      }
+
+      const meta = document.createElement("div");
+      meta.className = "bubble-meta" + (msg.role === "assistant" ? "" : " me");
+      meta.textContent = formatTime(msg.timestamp);
+
+      const menu = document.createElement("div");
+      menu.className = "bubble-menu";
+      ["pin", "copy", "edit", "delete", "history"].forEach((action) => {
+        const btn = document.createElement("button");
+        btn.dataset.action = action;
+        btn.textContent =
+          action === "pin"
+            ? "핀"
+            : action === "copy"
+            ? "복사"
+            : action === "edit"
+            ? "수정"
+            : action === "delete"
+            ? "삭제"
+            : "기록";
+        menu.appendChild(btn);
+      });
+
+      wrap.appendChild(toggle);
+      wrap.appendChild(bubble);
+      wrap.appendChild(meta);
+      wrap.appendChild(menu);
+      row.appendChild(wrap);
+      return row;
+    }
+    // 롱프레스(모바일/데스크탑)로 말풍선 메뉴 열기
+    messagesInner.addEventListener("touchstart", handlePressStart, { passive: false });
+    messagesInner.addEventListener("touchmove", handlePressMove, { passive: true });
+    messagesInner.addEventListener("touchend", handlePressEnd);
+    messagesInner.addEventListener("touchcancel", handlePressEnd);
+
+    messagesInner.addEventListener("mousedown", (e) => {
+      if (e.button !== 0) return;
+      handlePressStart(e);
+    });
+    messagesInner.addEventListener("mousemove", handlePressMove);
+    messagesInner.addEventListener("mouseup", handlePressEnd);
+    messagesInner.addEventListener("mouseleave", handlePressEnd);
+
+    function appendMessageToDOM(msg, options = {}) {
+      const { prepend = false } = options;
+      const row = buildMessageRowElement(msg);
+      if (prepend && messagesInner.firstChild) {
+        messagesInner.insertBefore(row, messagesInner.firstChild);
+      } else if (prepend) {
+        messagesInner.appendChild(row);
+      } else {
+        messagesInner.appendChild(row);
+      }
+    }
+
+    async function renderHistory() {
+      // 1순위: 서버 공용 히스토리
+      let msgs = await fetchServerHistory(1000);
+
+      // 서버에 아직 기록이 없다면 → 예전 localStorage 백업 사용
+      if (!msgs.length) {
+        msgs = loadHistory();
+      }
+
+      chatHistory = msgs;
+      messagesInner.innerHTML = "";
+
+      const total = chatHistory.length;
+      visibleStartIndex = Math.max(0, total - INITIAL_HISTORY_BATCH);
+
+      for (let i = visibleStartIndex; i < total; i++) {
+        appendMessageToDOM(chatHistory[i]);
+      }
+
+      // 서버 기준으로 localStorage도 덮어써서 백업처럼 사용
+      saveHistory();
+      scrollToBottom();
+    }
+
+    async function loadOlderMessages() {
+      if (isLoadingOlder) return;
+      if (!messagesEl) return;
+      if (visibleStartIndex <= 0) return;
+
+      isLoadingOlder = true;
+
+      const prevStart = Math.max(0, visibleStartIndex - HISTORY_PAGE_SIZE);
+      const prevScrollTop = messagesEl.scrollTop;
+      const prevScrollHeight = messagesEl.scrollHeight;
+
+      for (let i = visibleStartIndex - 1; i >= prevStart; i--) {
+        appendMessageToDOM(chatHistory[i], { prepend: true });
+      }
+
+      visibleStartIndex = prevStart;
+
+      const newScrollHeight = messagesEl.scrollHeight;
+      const heightDiff = newScrollHeight - prevScrollHeight;
+      messagesEl.scrollTop = prevScrollTop + heightDiff;
+
+      isLoadingOlder = false;
+    }
+
+    // --- 위로 올려서 새로고침 (대화 맨 아래 기준, 비상용) ---
+    const PULL_THRESHOLD = 60; // px
+    let pullStartY = null;
+    let pullDelta = 0;
+    let isPulling = false;
+
+    function isAtBottom() {
+      if (!messagesEl) return false;
+      const tolerance = 2;
+      return (
+        messagesEl.scrollTop + messagesEl.clientHeight >=
+        messagesEl.scrollHeight - tolerance
+      );
+    }
+
+    function resetPullIndicator() {
+      if (!pullIndicator) return;
+      pullIndicator.classList.remove("show", "ready");
+      pullIndicator.textContent = "↑ 올려서 새로고침";
+    }
+
+    function triggerHardRefresh() {
+      // 비상용: 페이지 전체 새로고침
+      window.location.reload();
+    }
+
+    if (messagesEl && pullIndicator) {
+      messagesEl.addEventListener(
+        "touchstart",
+        (e) => {
+          if (!isAtBottom()) {
+            pullStartY = null;
+            isPulling = false;
+            return;
+          }
+          if (!e.touches || !e.touches.length) return;
+          pullStartY = e.touches[0].clientY;
+          pullDelta = 0;
+          isPulling = true;
+        },
+        { passive: true }
+      );
+
+      messagesEl.addEventListener(
+        "touchmove",
+        (e) => {
+          if (!isPulling || pullStartY === null) return;
+          if (!e.touches || !e.touches.length) return;
+
+          const currentY = e.touches[0].clientY;
+          // 아래에서 위로 올릴 때: 손가락이 위로 가니까 값이 작아짐
+          pullDelta = pullStartY - currentY;
+
+          if (pullDelta <= 0 || !isAtBottom()) {
+            resetPullIndicator();
+            return;
+          }
+
+          pullIndicator.classList.add("show");
+
+          if (pullDelta >= PULL_THRESHOLD) {
+            pullIndicator.classList.add("ready");
+            pullIndicator.textContent = "↻ 놓으면 새로고침";
+          } else {
+            pullIndicator.classList.remove("ready");
+            pullIndicator.textContent = "↑ 올려서 새로고침";
+          }
+        },
+        { passive: true }
+      );
+
+      const endPull = () => {
+        if (!isPulling) {
+          pullStartY = null;
+          pullDelta = 0;
+          resetPullIndicator();
+          return;
+        }
+
+        const isReady =
+          pullDelta >= PULL_THRESHOLD && pullIndicator.classList.contains("ready");
+
+        pullStartY = null;
+        pullDelta = 0;
+        isPulling = false;
+        resetPullIndicator();
+
+        if (isReady) {
+          triggerHardRefresh();
+        }
+      };
+
+      messagesEl.addEventListener("touchend", endPull);
+      messagesEl.addEventListener("touchcancel", endPull);
+    }
+
+    if (messagesEl) {
+      messagesEl.addEventListener("scroll", () => {
+        if (messagesEl.scrollTop <= 40 && !isLoadingOlder && visibleStartIndex > 0) {
+          loadOlderMessages();
+        }
+      });
+    }
+
+    function scrollToBottom() {
+      if (!messagesEl) return;
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    // textarea 자동 높이 조절
+    function autoResizeInput() {
+      inputEl.style.height = "auto";
+      const maxHeight = 88;
+      const newHeight = Math.min(inputEl.scrollHeight, maxHeight);
+      inputEl.style.height = newHeight + "px";
+    }
+
+    inputEl.addEventListener("input", autoResizeInput);
+    autoResizeInput();
+
+    // 입력창 포커스 시, 키보드가 올라와도 마지막 메시지가 보이도록 살짝 내려줌
+    inputEl.addEventListener("focus", () => {
+      setTimeout(() => {
+        scrollToBottom();
+      }, 80);
+    });
+
+    // 엔터로 전송, Shift+Enter 줄바꿈
+    inputEl.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+
+    sendBtn.addEventListener("click", () => {
+      sendMessage();
+    });
+
+    async function sendMessage() {
+      const rawText = inputEl.value;
+      const text = rawText.trim();
+
+      if (!text && !pendingAttachments.length) return;
+
+      // 첨부파일 이름을 내용에 함께 표기 (나중에 백엔드에서 활용 가능)
+      const attachmentNames = pendingAttachments.map((att) => att.file?.name || "첨부파일");
+      let contentToSend = text;
+      if (attachmentNames.length) {
+        const label = "[첨부: " + attachmentNames.join(", ") + "]";
+        contentToSend = contentToSend ? contentToSend + "\n\n" + label : label;
+      }
+
+      // 첨부 메타데이터 (로컬 기록 + 백엔드 전송용)
+      const attachmentMeta = pendingAttachments.map((att) => {
+        const f = att.file;
+        const type = (f && f.type) || null;
+        const isImage = !!(type && type.startsWith("image/"));
+        const isVideo = !!(type && type.startsWith("video/"));
+        let kind = "file";
+        if (isImage) kind = "image";
+        else if (isVideo) kind = "video";
+
+        return {
+          id: att.id,
+          name: (f && f.name) || "첨부파일",
+          type,
+          size: typeof f?.size === "number" ? f.size : null,
+          kind,
+        };
+      });
+
+      // 1) 내 메시지 바로 추가
+      const userMsg = createMessage("user", contentToSend, undefined, attachmentMeta);
+      chatHistory.push(userMsg);
+      appendMessageToDOM(userMsg);
+      saveHistory();
+
+      inputEl.value = "";
+      autoResizeInput();
+      scrollToBottom();
+
+      if (pendingAttachments.length) {
+        clearPendingAttachments();
+      }
+
+      // 2) 부감독 타이핑 표시
+      showTypingIndicator();
+
+      // 3) 부감독에게 전달
+      try {
+        const resp = await fetch("/api/chat", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            messages: [{ role: "user", content: contentToSend }],
+            attachments: attachmentMeta,
+            upload_profile: uploadProfile,
+          }),
+        });
+
+        if (!resp.ok) {
+          throw new Error(`HTTP ${resp.status}`);
+        }
+
+        const data = await resp.json();
+        const replyText =
+          data && typeof data.reply === "string" ? data.reply.trim() : "";
+
+        if (replyText) {
+          hideTypingIndicator();
+          const assistantMsg = createMessage("assistant", replyText);
+          chatHistory.push(assistantMsg);
+          appendMessageToDOM(assistantMsg);
+          saveHistory();
+          scrollToBottom();
+        } else {
+          hideTypingIndicator();
+        }
+      } catch (e) {
+        console.error(e);
+        hideTypingIndicator();
+        const errorMsg = createMessage(
+          "assistant",
+          "연결 중 오류가 났어. (HTTP 오류)"
+        );
+        chatHistory.push(errorMsg);
+        appendMessageToDOM(errorMsg);
+        saveHistory();
+        scrollToBottom();
+      }
+    }
+
+    // 말풍선 메뉴 토글 + 핀/삭제 등
+    messagesInner.addEventListener("click", (e) => {
+      const isMenuArea = !!e.target.closest(".bubble-menu");
+      const toggle = e.target.closest(".bubble-menu-toggle");
+      const menuBtn = e.target.closest(".bubble-menu button");
+      const bubble = e.target.closest(".bubble");
+
+      // 더블탭(더블클릭)으로 텍스트 선택
+      if (bubble && !isMenuArea && !toggle && !menuBtn) {
+        handleBubbleTap(bubble);
+      }
+
+      if (toggle) {
+        const wrap = toggle.closest(".bubble-wrap");
+        openBubbleMenuForWrap(wrap);
+        return;
+      }
+
+      if (menuBtn) {
+        const action = menuBtn.dataset.action;
+        const wrap = menuBtn.closest(".bubble-wrap");
+        const bubbleEl = wrap.querySelector(".bubble");
+        const menu = wrap.querySelector(".bubble-menu");
+
+        if (action === "pin") {
+          const text = bubbleEl.textContent || "";
+          pinText.textContent = text;
+          pinCapsule.style.display = "flex";
+        } else if (action === "copy") {
+          const text = bubbleEl.textContent || "";
+          if (text) {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+              navigator.clipboard.writeText(text).catch(() => {
+                try {
+                  const temp = document.createElement("textarea");
+                  temp.value = text;
+                  temp.style.position = "fixed";
+                  temp.style.left = "-9999px";
+                  document.body.appendChild(temp);
+                  temp.select();
+                  document.execCommand("copy");
+                  document.body.removeChild(temp);
+                } catch (_) {
+                  // ignore
+                }
+              });
+            } else {
+              try {
+                const temp = document.createElement("textarea");
+                temp.value = text;
+                temp.style.position = "fixed";
+                temp.style.left = "-9999px";
+                document.body.appendChild(temp);
+                temp.select();
+                document.execCommand("copy");
+                document.body.removeChild(temp);
+              } catch (_) {
+                // ignore
+              }
+            }
+          }
+        } else if (action === "delete") {
+          const row = wrap.closest(".msg-row");
+          if (row) row.remove();
+          if (wrap.dataset.id) {
+            chatHistory = chatHistory.filter((m) => m.id !== wrap.dataset.id);
+            saveHistory();
+          }
+        } else if (action === "edit") {
+          inputEl.value = bubbleEl.textContent || "";
+          inputEl.focus();
+        } else if (action === "history") {
+          console.log("history clicked for", wrap.dataset.id);
+        }
+
+        if (menu) {
+          menu.classList.remove("show");
+        }
+      }
+    });
+
+    pinClearBtn.addEventListener("click", () => {
+      pinCapsule.style.display = "none";
+      pinText.textContent = "";
+    });
+
+    // 첨부 파일 / 사진 선택
+    attachBtn.addEventListener("click", () => {
+      if (fileInput) {
+        fileInput.click();
+      }
+    });
+
+    if (fileInput) {
+      fileInput.addEventListener("change", (e) => {
+        const files = e.target.files;
+        if (files && files.length) {
+          addFilesToAttachments(files);
+        }
+      });
+    }
+
+    // 바깥 클릭 시 열려있는 말풍선 메뉴 닫기
+    document.addEventListener("click", (e) => {
+      if (e.target.closest(".bubble-wrap")) return;
+      document
+        .querySelectorAll(".bubble-menu.show")
+        .forEach((m) => m.classList.remove("show"));
+    });
+
+    // 페이지 로드 시 서버 기준으로 대화 불러오기
+    renderHistory();
+  </script>
+</body>
+</html>
