@@ -63,7 +63,7 @@
     /* Ensure no body.app-bg-forest::before exists */
 
     .app {
-      height: calc(var(--vh) * 100); /* 실제 뷰포트 높이에 맞춰 키보드 등장 시에도 자연스럽게 줄어들도록 */
+      min-height: 100vh; /* 브라우저 주소창/툴바 상태와 상관없이 항상 화면 높이 이상 유지 */
       padding: 12px 12px calc(12px + env(safe-area-inset-bottom));
       display: flex;
       flex-direction: column;
@@ -865,17 +865,6 @@
     let visibleStartIndex = 0;
     let isLoadingOlder = false;
     let currentBgObjectUrl = null;
-
-    // 뷰포트 높이 동기화: 키보드가 올라와도 .app 높이를 실제 화면에 맞게 조정
-    function updateViewportHeight() {
-      const vh = window.innerHeight * 0.01;
-      document.documentElement.style.setProperty("--vh", `${vh}px`);
-    }
-
-    updateViewportHeight();
-    // iOS 키보드 등장/퇴장 시 발생하는 resize 이벤트에는 반응하지 않고,
-    // 가로/세로 전환처럼 진짜 레이아웃 변화에만 대응한다.
-    window.addEventListener("orientationchange", updateViewportHeight);
 
     // 업로드 프로필 초기화 (localStorage에서 불러오기)
     if (uploadProfileSelect) {
