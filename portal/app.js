@@ -79,13 +79,15 @@ function nowTime() {
 
 function saveToStorage() {
   try {
+    // 너무 커지지 않도록 최근 500개만 저장
+    const trimmed = messages.slice(-500);
     const payload = {
-      messages,
+      messages: trimmed,
       pinnedId,
     };
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
-  } catch (_) {
-    // ignore
+  } catch (e) {
+    console.warn("localStorage save failed", e);
   }
 }
 
