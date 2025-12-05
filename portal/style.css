@@ -17,20 +17,28 @@
       -webkit-tap-highlight-color: transparent;
     }
 
-    html, body {
-      margin: 0;
-      padding: 0;
-      height: 100%;
-      overflow: hidden;
-      font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-      background: var(--bg-cream);
-      color: var(--text-main);
-      -webkit-text-size-adjust: 100%;
-    }
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  /* 위쪽은 상단 패널 계열 색, 아래는 원래 크림색 */
+  background: linear-gradient(
+    to bottom,
+    #323732 0,
+    #323732 60px,
+    var(--bg-cream) 60px,
+    var(--bg-cream) 100%
+  );
+  color: var(--text-main);
+  -webkit-text-size-adjust: 100%;
+}
 
-    body {
-      background: var(--bg-cream);
-    }
+/* body는 html 그라데이션을 그대로 쓰게 투명 처리 */
+body {
+  background: transparent;
+}
 
     .app {
       height: calc(var(--vh) * 100);
