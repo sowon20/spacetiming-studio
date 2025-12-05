@@ -64,8 +64,8 @@
     }
 
     .app {
-      height: 95vh; /* iOS 키보드 대응용, 거의 전체 화면 */
-      padding: 8px 12px calc(12px + env(safe-area-inset-bottom));
+      height: 100dvh; /* iOS 홈 화면 앱에서 노치 포함 전체 화면 */
+      padding: calc(8px + env(safe-area-inset-top)) 12px calc(12px + env(safe-area-inset-bottom));
       display: flex;
       flex-direction: column;
       gap: 8px;
@@ -357,11 +357,56 @@
       height: 10px;
       border: none;
       border-radius: 999px;
-      background: currentColor;
-      cursor: pointer;
+      background: transparent;
       padding: 0;
-      font-size: 0; /* "⋯" 텍스트는 숨김 */
-      opacity: 0.8; /* 살짝 투명하게 */
+      font-size: 0;
+      opacity: 0;
+      pointer-events: none; /* 말풍선 롱프레스 메뉴로 대체 */
+    }
+    .bubble.has-attachments {
+      border: 1px solid rgba(255, 255, 255, 0.18); /* 첨부가 있는 버블만 살짝 테두리 */
+    }
+
+    .msg-row.other .bubble.has-attachments {
+      border-color: rgba(0, 0, 0, 0.08);
+    }
+
+    .bubble-attachments {
+      margin-top: 6px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+
+    .bubble-attachment {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 6px;
+      border-radius: 999px;
+      font-size: 11px;
+    }
+
+    .msg-row.other .bubble-attachment {
+      background: rgba(0, 0, 0, 0.03);
+      color: var(--text-soft);
+    }
+
+    .msg-row.me .bubble-attachment {
+      background: rgba(255, 255, 255, 0.12);
+      color: #f5f2ec;
+    }
+
+    .bubble-attachment-icon {
+      font-size: 11px;
+      flex-shrink: 0;
+    }
+
+    .bubble-attachment-name {
+      max-width: 140px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .msg-row.other .bubble-menu-toggle {
@@ -852,12 +897,13 @@
       return `${hh}:${mm}`;
     }
 
-    function createMessage(role, content, timestamp) {
+    function createMessage(role, content, timestamp, attachments) {
       return {
         id: Date.now().toString() + Math.random().toString(16).slice(2),
         role,
         content,
         timestamp: timestamp ?? Date.now(),
+        attachments: Array.isArray(attachments) ? attachments : [],
       };
     }
 
@@ -883,6 +929,99 @@
       text = text.replace(/`([^`]+)`/g, "<code>$1</code>");
 
       return text;
+    }
+
+    function truncateFileName(name, maxLen = 24) {
+      const str = String(name || "첨부파일");
+      if (str.length <= maxLen) return str;
+      const extIndex = str.lastIndexOf(".");
+      if (extIndex > 0 && extIndex < str.length - 1) {
+        const base = str.slice(0, extIndex);
+        const ext = str.slice(extIndex);
+        if (base.length > maxLen - ext.length - 3) {
+          return base.slice(0, maxLen - ext.length - 3) + "..." + ext;
+        }
+        return base + "..." + ext;
+      }
+      return str.slice(0, maxLen - 3) + "...";
+    }
+
+    const LONG_PRESS_MS = 500;
+    const LONG_PRESS_MOVE_TOLERANCE = 10;
+    let longPressTimer = null;
+    let longPressTargetWrap = null;
+    let longPressStartX = 0;
+    let longPressStartY = 0;
+
+    let lastTapTime = 0;
+    let lastTapBubble = null;
+    const DOUBLE_TAP_MS = 350;
+
+    function openBubbleMenuForWrap(wrap) {
+      if (!wrap) return;
+      const menu = wrap.querySelector(".bubble-menu");
+      if (!menu) return;
+      const allMenus = document.querySelectorAll(".bubble-menu");
+      allMenus.forEach((m) => {
+        if (m !== menu) m.classList.remove("show");
+      });
+      menu.classList.add("show");
+    }
+
+    function cancelLongPress() {
+      if (longPressTimer) {
+        clearTimeout(longPressTimer);
+        longPressTimer = null;
+      }
+      longPressTargetWrap = null;
+    }
+
+    function handlePressStart(event) {
+      const bubble = event.target.closest(".bubble");
+      if (!bubble) return;
+      const wrap = bubble.closest(".bubble-wrap");
+      if (!wrap) return;
+
+      longPressTargetWrap = wrap;
+      const point = event.touches ? event.touches[0] : event;
+      longPressStartX = point.clientX;
+      longPressStartY = point.clientY;
+
+      cancelLongPress();
+      longPressTimer = setTimeout(() => {
+        openBubbleMenuForWrap(longPressTargetWrap);
+        longPressTimer = null;
+      }, LONG_PRESS_MS);
+    }
+
+    function handlePressMove(event) {
+      if (!longPressTimer) return;
+      const point = event.touches ? event.touches[0] : event;
+      if (!point) return;
+      const dx = Math.abs(point.clientX - longPressStartX);
+      const dy = Math.abs(point.clientY - longPressStartY);
+      if (dx > LONG_PRESS_MOVE_TOLERANCE || dy > LONG_PRESS_MOVE_TOLERANCE) {
+        cancelLongPress();
+      }
+    }
+
+    function handlePressEnd() {
+      cancelLongPress();
+    }
+
+    function handleBubbleTap(bubble) {
+      const now = Date.now();
+      if (lastTapBubble === bubble && now - lastTapTime < DOUBLE_TAP_MS) {
+        const range = document.createRange();
+        range.selectNodeContents(bubble);
+        const selection = window.getSelection();
+        if (selection) {
+          selection.removeAllRanges();
+          selection.addRange(range);
+        }
+      }
+      lastTapBubble = bubble;
+      lastTapTime = now;
     }
 
     function clearPendingAttachments() {
@@ -1013,6 +1152,33 @@
       bubble.className = "bubble " + (msg.role === "assistant" ? "other" : "me");
       bubble.innerHTML = renderContent(msg.content);
 
+      if (Array.isArray(msg.attachments) && msg.attachments.length) {
+        bubble.classList.add("has-attachments");
+        const attWrap = document.createElement("div");
+        attWrap.className = "bubble-attachments";
+
+        msg.attachments.forEach((att) => {
+          const chip = document.createElement("div");
+          chip.className = "bubble-attachment";
+
+          const icon = document.createElement("span");
+          icon.className = "bubble-attachment-icon";
+          const kind = att.kind || (att.type && att.type.startsWith("image/") ? "image" : "file");
+          icon.textContent =
+            kind === "image" ? "🖼" : kind === "video" ? "🎬" : "📎";
+
+          const label = document.createElement("span");
+          label.className = "bubble-attachment-name";
+          label.textContent = truncateFileName(att.name || "첨부파일");
+
+          chip.appendChild(icon);
+          chip.appendChild(label);
+          attWrap.appendChild(chip);
+        });
+
+        bubble.appendChild(attWrap);
+      }
+
       const meta = document.createElement("div");
       meta.className = "bubble-meta" + (msg.role === "assistant" ? "" : " me");
       meta.textContent = formatTime(msg.timestamp);
@@ -1040,6 +1206,19 @@
       row.appendChild(wrap);
       return row;
     }
+    // 롱프레스(모바일/데스크탑)로 말풍선 메뉴 열기
+    messagesInner.addEventListener("touchstart", handlePressStart, { passive: true });
+    messagesInner.addEventListener("touchmove", handlePressMove, { passive: true });
+    messagesInner.addEventListener("touchend", handlePressEnd);
+    messagesInner.addEventListener("touchcancel", handlePressEnd);
+
+    messagesInner.addEventListener("mousedown", (e) => {
+      if (e.button !== 0) return;
+      handlePressStart(e);
+    });
+    messagesInner.addEventListener("mousemove", handlePressMove);
+    messagesInner.addEventListener("mouseup", handlePressEnd);
+    messagesInner.addEventListener("mouseleave", handlePressEnd);
 
     function appendMessageToDOM(msg, options = {}) {
       const { prepend = false } = options;
@@ -1247,8 +1426,27 @@
         contentToSend = contentToSend ? contentToSend + "\n\n" + label : label;
       }
 
+      // 첨부 메타데이터 (로컬 기록 + 백엔드 전송용)
+      const attachmentMeta = pendingAttachments.map((att) => {
+        const f = att.file;
+        const type = (f && f.type) || null;
+        const isImage = !!(type && type.startsWith("image/"));
+        const isVideo = !!(type && type.startsWith("video/"));
+        let kind = "file";
+        if (isImage) kind = "image";
+        else if (isVideo) kind = "video";
+
+        return {
+          id: att.id,
+          name: (f && f.name) || "첨부파일",
+          type,
+          size: typeof f?.size === "number" ? f.size : null,
+          kind,
+        };
+      });
+
       // 1) 내 메시지 바로 추가
-      const userMsg = createMessage("user", contentToSend);
+      const userMsg = createMessage("user", contentToSend, undefined, attachmentMeta);
       chatHistory.push(userMsg);
       appendMessageToDOM(userMsg);
       saveHistory();
@@ -1273,14 +1471,7 @@
           },
           body: JSON.stringify({
             messages: [{ role: "user", content: contentToSend }],
-            attachments: pendingAttachments.map((att) => {
-              const f = att.file;
-              return {
-                name: (f && f.name) || "첨부파일",
-                type: (f && f.type) || null,
-                size: typeof f?.size === "number" ? f.size : null,
-              };
-            }),
+            attachments: attachmentMeta,
             upload_profile: uploadProfile,
           }),
         });
@@ -1319,17 +1510,19 @@
 
     // 말풍선 메뉴 토글 + 핀/삭제 등
     messagesInner.addEventListener("click", (e) => {
+      const isMenuArea = !!e.target.closest(".bubble-menu");
       const toggle = e.target.closest(".bubble-menu-toggle");
       const menuBtn = e.target.closest(".bubble-menu button");
+      const bubble = e.target.closest(".bubble");
+
+      // 더블탭(더블클릭)으로 텍스트 선택
+      if (bubble && !isMenuArea && !toggle && !menuBtn) {
+        handleBubbleTap(bubble);
+      }
 
       if (toggle) {
         const wrap = toggle.closest(".bubble-wrap");
-        const menu = wrap.querySelector(".bubble-menu");
-        const allMenus = document.querySelectorAll(".bubble-menu");
-        allMenus.forEach((m) => {
-          if (m !== menu) m.classList.remove("show");
-        });
-        menu.classList.toggle("show");
+        openBubbleMenuForWrap(wrap);
         return;
       }
 
@@ -1357,7 +1550,9 @@
           console.log("history clicked for", wrap.dataset.id);
         }
 
-        menu.classList.remove("show");
+        if (menu) {
+          menu.classList.remove("show");
+        }
       }
     });
 
