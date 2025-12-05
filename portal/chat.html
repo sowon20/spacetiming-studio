@@ -20,7 +20,7 @@
   <meta name="apple-mobile-web-app-title" content="Spacetime Director" />
   <!-- (선택) 아이콘 파일이 있을 경우 이 경로에 두면 홈화면 아이콘 사용 가능 -->
   <link rel="apple-touch-icon" href="/static/icons/app-icon-192.png" />
-  <!-- 안드로이드 주소창 색상 등 -->
+  <meta name="theme-color" content="#1a1c1a" />
   <style>
     :root {
       --vh: 1vh;
@@ -49,7 +49,7 @@
       font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
       color: var(--text-main);
       -webkit-text-size-adjust: 100%;
-      background-color: transparent; /* 배경은 고정 div가 담당 */
+      background-color: #000000; /* 배경은 고정 div가 담당 */
     }
 
     html {
@@ -71,7 +71,6 @@
       left: 0;
       width: 100vw;
       height: 100vh;
-      z-index: -1; /* 앱 내용 뒤로 */
       background-image: url("/static/backgrounds/forest_book.jpg");
       background-size: cover;
       background-position: center;
