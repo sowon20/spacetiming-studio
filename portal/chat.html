@@ -1823,6 +1823,13 @@
             ? f.size
             : null;
 
+        // Read optional server-side file path from upload response
+        const serverPath =
+          uploaded.server_path ||
+          uploaded.path ||
+          uploaded.local_path ||
+          null;
+
         const name = uploaded.name || (f && f.name) || "첨부파일";
         const url = uploaded.url || null;
 
@@ -1833,6 +1840,7 @@
           size,
           kind,
           url,
+          server_path: serverPath,
         };
       });
 

@@ -29,8 +29,10 @@ class AttachmentMeta(BaseModel):
     name: str
     type: Optional[str] = None
     size: Optional[int] = None
-    # 업로드된 파일에 접근할 수 있는 URL (예: /uploads/...)
     url: Optional[str] = None
+    # 포털 서버(app.py)에서 전달해주는 실제 서버 로컬 경로
+    # 예: /home/sowon/spacetiming-studio/uploads/local_default/IMG_3001.jpeg
+    server_path: Optional[str] = None
 
 
 class ChatRequest(BaseModel):
@@ -293,6 +295,7 @@ async def upload_files(
                 "saved_as": safe_name,
                 "url": url,
                 "upload_profile": upload_profile,
+                "server_path": str(target_path),
             }
         )
 
