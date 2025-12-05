@@ -11,7 +11,15 @@
     },
     "recent_chat": {
       "path": "portal_history/sowon.chat.jsonl",
-      "usage": "실제 대화 로그 전체. LLM에는 최근 N개만 컨텍스트로 넣고, 파일은 계속 축적한다."
+      "usage": "실제 대화 로그 전체. LLM에는 최근 N개만 컨텍스트로 넣고, 파일은 계속 축적한다. 1층 raw 로그 레이어."
+    },
+    "episodic_memory": {
+      "path": "memory/*.memory.jsonl",
+      "usage": "불탄방/옛 대화/프로젝트/삶의 순간들에서 뽑은 '기억 조각'들을 저장한다. topic/triggers/summary 같은 메타데이터를 포함하고, 지금 대화 주제와 겹칠 때만 LLM 프롬프트에 포함한다. 2층 에피소드 기억 레이어."
+    },
+    "archive_chat": {
+      "path": "akashic/raw/imports/*.txt",
+      "usage": "옛 채팅방/실험 로그 원문을 그대로 보존한다. LLM에 직접 넣지 않고, 사람이 필요할 때 참고하거나, 중요한 부분을 episodic_memory 레이어로 옮길 때 출처로 사용한다."
     }
   },
   "notes": [

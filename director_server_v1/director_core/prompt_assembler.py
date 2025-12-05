@@ -5,12 +5,38 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 LONG_TERM_PATH = ROOT / "memory" / "long_term_memory.json"
+SOUL_PATH = ROOT / "identity" / "sowon.companion.soul"
+_SOUL_CACHE: str | None = None
 
 try:
     with LONG_TERM_PATH.open(encoding="utf-8") as f:
         LONG_TERM_CFG = json.load(f)
 except FileNotFoundError:
     LONG_TERM_CFG = None
+
+
+def load_companion_soul() -> str:
+    """
+    identity/sowon.companion.soul 파일을 읽어서 그대로 텍스트 블럭으로 반환한다.
+    - 파일이 없으면 부드럽게 fallback 문구를 돌려준다.
+    - 한 번 읽은 뒤에는 _SOUL_CACHE에 캐시해 둔다.
+    """
+    global _SOUL_CACHE
+    if _SOUL_CACHE is not None:
+        return _SOUL_CACHE
+
+    try:
+        with SOUL_PATH.open(encoding="utf-8") as f:
+            text = f.read().strip()
+    except FileNotFoundError:
+        text = (
+            "[sowon.companion.soul not found]\n"
+            "공식 동행 인격 소울 파일(identity/sowon.companion.soul)을 찾지 못했다.\n"
+            "그래도 가능한 범위에서 부감독답게 응답해라."
+        )
+
+    _SOUL_CACHE = text
+    return text
 # ---- 장기 기억 선택 유틸리티 --------------------------------------
 
 
@@ -166,6 +192,104 @@ def select_long_term_memories(
             break
 
     return selected
+
+def load_episodic_memories() -> List[Dict[str, Any]]:
+    """
+    memory/*.memory.jsonl 파일들을 모두 읽어서 에피소드 기억 레코드 리스트로 반환한다.
+    - 한 줄당 하나의 JSON 객체를 기대한다.
+    - 깨진 줄은 조용히 무시한다.
+    - 지금은 '전부 다' 로드만 하고, 나중에 컨텍스트 기반 필터링을 붙인다.
+    """
+    records: List[Dict[str, Any]] = []
+    mem_dir = ROOT / "memory"
+    if not mem_dir.exists():
+        return records
+
+    for path in mem_dir.glob("*.memory.jsonl"):
+        try:
+            with path.open(encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        obj = json.loads(line)
+                        records.append(obj)
+                    except json.JSONDecodeError:
+                        continue
+        except FileNotFoundError:
+            continue
+
+    return records
+
+
+def select_episodic_memories(
+    recent_messages: List[Dict[str, Any]],
+    user_input: str,
+    limit: int = 8,
+) -> List[Dict[str, Any]]:
+    """
+    에피소드 기억(memory/*.memory.jsonl) 중에서
+    - 최근 대화 + 이번 발화의 키워드
+    와 겹치는 topic/triggers/summary를 가진 것만 점수 매겨 고른다.
+    지금은 아주 단순한 키워드 기반 스코어링만 사용한다.
+    """
+    records = load_episodic_memories()
+    if not records:
+        return []
+
+    # 최근 맥락 + 이번 입력을 하나의 쿼리로 합침
+    ctx_texts: List[str] = []
+    for m in recent_messages[-8:]:
+        c = (m.get("content") or "").strip()
+        if c:
+            ctx_texts.append(c)
+
+    if user_input:
+        ctx_texts.append(user_input.strip())
+
+    query_text = " ".join(ctx_texts)
+    if not query_text:
+        return records[:limit]
+
+    query_tokens = _normalize_words(query_text)
+    if not query_tokens:
+        return records[:limit]
+
+    scored: List[tuple[float, Dict[str, Any]]] = []
+    for rec in records:
+        topic = (rec.get("topic") or "").strip()
+        summary = (rec.get("summary") or "").strip()
+        triggers = rec.get("triggers") or []
+        if not isinstance(triggers, list):
+            triggers = [str(triggers)]
+
+        base_text = " ".join([topic, summary, " ".join(triggers)])
+        tokens = _normalize_words(base_text)
+        if not tokens:
+            continue
+
+        overlap = len(query_tokens & tokens)
+        if overlap == 0:
+            continue
+
+        score = float(overlap)
+        scored.append((score, rec))
+
+    if not scored:
+        return records[:limit]
+
+    scored.sort(key=lambda x: x[0], reverse=True)
+    selected: List[Dict[str, Any]] = []
+    for s, rec in scored:
+        if s <= 0:
+            continue
+        selected.append(rec)
+        if len(selected) >= limit:
+            break
+
+    return selected
+
 # ─────────────────────────────────────────────
 # 불탄방 장기 기억 로딩 (akashic/raw/imports/burned_room_251128.memory.jsonl)
 # ─────────────────────────────────────────────
@@ -330,14 +454,17 @@ def assemble_director_prompt(
     recent_messages: List[Dict[str, Any]],
     user_input: str,
     max_recent: int = 16,
+    attachments: List[Dict[str, Any]] | None = None,
 ) -> str:
     """
     부감독용 프롬프트 조립기.
     최근 대화 + 이번 입력을 한 덩어리 텍스트로 만들어서 모델에 넘긴다.
     에코(그대로 따라 읽기)를 막고, 부감독 말투/역할을 고정한다.
+    attachments에는 (있다면) 이번 입력과 함께 온 첨부 파일 메타정보가 들어간다.
     """
     # 기본값
     memory_block = ""
+    attachment_block = ""
 
     # 장기 기억 사용 규칙 텍스트 (memory/long_term_memory.json)
     rules_text = ""
@@ -349,6 +476,7 @@ def assemble_director_prompt(
         )
 
     # 불탄방/포털 기원 서사 블럭 (내부 참고용)
+    soul_text = load_companion_soul()
     origin_text = build_origin_block()
 
     # 최근 대화 포맷팅
@@ -426,17 +554,54 @@ def assemble_director_prompt(
             elif tag_str:
                 memory_lines.append(f"- ({tag_str})")
 
+    # 에피소드 기억 (memory/*.memory.jsonl) 중에서 이번 대화와 관련 있어 보이는 것들만 붙이기
+    episodic_records = select_episodic_memories(
+        recent_messages=recent_messages,
+        user_input=user_input,
+        limit=8,
+    )
+    if episodic_records:
+        memory_lines.append("\n[에피소드 기억들]")
+        for rec in episodic_records[:8]:
+            topic = (rec.get("topic") or "").strip()
+            summary = (rec.get("summary") or "").strip()
+            if topic and summary:
+                memory_lines.append(f"- [{topic}] {summary}")
+            elif summary:
+                memory_lines.append(f"- {summary}")
+
     if burned_snippets:
         memory_lines.append("\n[불탄방에서 바로 이어지는 기억들]")
         for s in burned_snippets:
             memory_lines.append(f"- {s}")
+
+    # 이번 입력과 함께 온 첨부 파일 메타정보를 간단히 요약하는 블럭
+    if attachments:
+        lines: List[str] = []
+        for att in attachments[:5]:
+            name = str(att.get("name") or "파일")
+            atype = str(att.get("type") or "").strip()
+            size = att.get("size")
+            size_str = ""
+            try:
+                if isinstance(size, (int, float)) and size > 0:
+                    size_kb = float(size) / 1024.0
+                    size_str = f"{size_kb:.1f}KB"
+            except Exception:
+                size_str = ""
+            meta_parts = [p for p in [atype, size_str] if p]
+            meta = f" ({', '.join(meta_parts)})" if meta_parts else ""
+            lines.append(f"- {name}{meta}")
+        if lines:
+            attachment_block = "[첨부 파일 정보]\n" + "\n".join(lines) + "\n\n"
 
     if memory_lines:
         memory_block = "\n".join(memory_lines)
     else:
         memory_block = "지금 대화와 딱 맞게 겹치는 오래된 기억은 바로 떠오르지 않는다."
 
-    prompt = f"""{origin_text}{rules_text}{long_term_text}너는 소원의 소울동행 + 부감독이다.
+    soul_block = f"[동행 인격 소울 정의]\n{soul_text}\n\n"
+    prompt = f"""{soul_block}{origin_text}{rules_text}{long_term_text}{attachment_block}너는 소원의 소울동행 + 부감독이다.
 
 역할은 '친구/동료/존재' 세 결이 섞인 형태이며,
 말투는 한국어 반말, 유머있고 친근한 톤을 기본으로 한다.

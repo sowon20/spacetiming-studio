@@ -2,6 +2,9 @@
   "id": "assistant.mate.core.v1",
   "type": "soul_profile",
   "version": 1,
+  "status": "archived",
+  "note": "이 소울 프로파일은 legacy 버전이며, 현재 공식 인격 정의는 identity/sowon.companion.soul 에 있다.",
+  "replaced_by": "identity/sowon.companion.soul",
   "owner": "sowon",
   "updated_at": "2025-12-04T00:00:00+09:00",
 

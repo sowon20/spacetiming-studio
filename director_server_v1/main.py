@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 from director_core.prompt_assembler import assemble_director_prompt
 from director_core.recent_context import RecentContext
@@ -44,8 +44,15 @@ class ChatMessage(BaseModel):
     content: str
 
 
+class AttachmentMeta(BaseModel):
+    name: str
+    type: Optional[str] = None
+    size: Optional[int] = None
+
+
 class ChatRequest(BaseModel):
     messages: List[ChatMessage]
+    attachments: Optional[List[AttachmentMeta]] = None
 
 
 class ChatResponse(BaseModel):
@@ -57,6 +64,9 @@ async def chat(req: "ChatRequest"):
     """
     director_core recent_context + 부감독 프롬프트 + Gemini 호출
     """
+    # 첨부 파일 메타정보는 req.attachments 로 들어온다.
+    # assemble_director_prompt 호출 시 attachments 인자로 넘겨서,
+    # 프롬프트 상단에 [첨부 파일 정보] 블럭으로 간단히 요약해 준다.
     # 1) 최근 대화 컨텍스트 로드/업데이트
     ctx = RecentContext()
     ctx.load()
@@ -75,6 +85,7 @@ async def chat(req: "ChatRequest"):
         recent_messages=recent_for_prompt,
         user_input=user_input,
         max_recent=32,
+        attachments=[a.model_dump() for a in (req.attachments or [])] or None,
     )
 
     # 4) Gemini 호출

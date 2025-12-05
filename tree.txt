@@ -1,0 +1,31 @@
+spacetiming-studio/
+  # === core runtime (현재 부감독/포털이 실제로 쓰는 부분) ===
+  identity/
+    identity.soul              # 초기 원본 소울 (아카이브용)
+    sowon.companion.soul      # 소원 공식 동행 소울 (메인 인격)
+    companions/                # (나중용) 추가 소울들은 여기 하위에 폴더로 모으기
+  akashic/
+    soul/
+      assistant.director.core.v1.soul
+    raw/
+      imports/
+        burned_room_251128.txt
+        burned_room_251128.memory.jsonl
+  director_server_v1/
+    storage/
+      recent_context.json     # 단기기억 (최근 대화 N턴)
+  portal/
+    chat.html
+    style.css
+    app.js
+  portal_history/
+    sowon.chat.jsonl
+    sowon.chat.mac.jsonl
+    sowon.chat.pi_boot.backup.jsonl
+  memory/
+    (*.jsonl)                 # 장기/중간 기억들
+  # === meta & docs ===
+  tree.txt                    # 이 파일: 전체 구조 요약 용
+  RESET_FLOW.md               # 리셋 절차 요약 문서
+  # === legacy & experiments (런타임 비참여, 나중에 archive/로 이사 후보) ===
+  assistant/                  # 옛 부감독/실험/로그 폴더 (지금은 안 건드림)

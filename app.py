@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import json
 import requests
-from typing import List
+from typing import List, Optional
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -22,8 +22,15 @@ class ChatMessage(BaseModel):
     content: str
 
 
+class AttachmentMeta(BaseModel):
+    name: str
+    type: Optional[str] = None
+    size: Optional[int] = None
+
+
 class ChatRequest(BaseModel):
     messages: List[ChatMessage]
+    attachments: Optional[List[AttachmentMeta]] = None
 
 
 class ChatResponse(BaseModel):
@@ -139,6 +146,7 @@ async def chat(req: ChatRequest):
     - 여기서 director_core(8897)로 그대로 포워딩
     - 부감독 뇌의 reply만 꺼내서 반환
     """
+    # 첨부 파일 메타정보는 req.attachments 로 들어온다. 아직은 director_core로 포워딩하지 않고 서버에서만 보존한다.
     # director_core_v1 형식으로 변환
     payload = {
         "messages": [m.model_dump() for m in req.messages]

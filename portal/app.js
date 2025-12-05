@@ -1,3 +1,8 @@
+// portal/app.js
+// 시공간 스튜디오 포털 클라이언트 스크립트
+// - DIRECTOR_API_URL: app.py 의 /api/chat 로 요청을 보낸다.
+// - STORAGE_KEY: RESET_FLOW.md 에서 설명한 localStorage 키와 맞춰서 관리한다.
+
 const DIRECTOR_API_URL = "/api/chat";
 
 const chatListEl = document.getElementById("chat-list");
@@ -25,7 +30,17 @@ let typingRow = null;
 
 let isSending = false;
 
-const STORAGE_KEY = "director_chat_messages_v2";
+const STORAGE_KEY = "director_chat_messages_v2"; // 브라우저 UI 히스토리 저장용 (RESET_FLOW.md 참고)
+
+function updateSendButtonState() {
+  const hasText = composerInput.value.trim().length > 0;
+  const hasAttachments = attachments.length > 0;
+  if (hasText || hasAttachments) {
+    sendBtn.classList.remove("disabled");
+  } else {
+    sendBtn.classList.add("disabled");
+  }
+}
 
 function escapeHtml(str) {
   if (str === null || str === undefined) return "";
@@ -277,9 +292,10 @@ function renderAttachments() {
     pill.append(nameSpan, removeBtn);
     attachmentsStrip.appendChild(pill);
   });
+  updateSendButtonState();
 }
 
-async function sendToDirector(text) {
+async function sendToDirector(text, attachmentMeta) {
   const payload = {
     messages: [
       {
@@ -288,6 +304,12 @@ async function sendToDirector(text) {
       },
     ],
   };
+
+  // 첨부 파일 메타정보(이름/타입/크기)는 payload.attachments에 넣어서 서버로 함께 보낸다.
+  // 아직 바이너리 업로드는 하지 않고, 나중에 app.py 확장 시 이 정보를 활용한다.
+  if (attachmentMeta && attachmentMeta.length) {
+    payload.attachments = attachmentMeta;
+  }
 
   const res = await fetch(DIRECTOR_API_URL, {
     method: "POST",
@@ -313,14 +335,30 @@ async function handleSend() {
 
   isSending = true;  // 잠금
 
-  addMessage("user", raw);
+  // 첨부 파일 메타정보 구성
+  const attachmentMeta = attachments.map((f) => ({
+    name: f.name,
+    type: f.type,
+    size: f.size,
+  }));
+
+  // 사용자에게 보여줄 텍스트에는 첨부 파일 목록을 한 줄로 덧붙인다.
+  const attachmentNote =
+    attachmentMeta.length > 0
+      ? `\n\n[첨부 파일: ${attachmentMeta.map((a) => a.name).join(", ")}]`
+      : "";
+  const displayText = raw + attachmentNote;
+
+  addMessage("user", displayText);
   composerInput.value = "";
-  sendBtn.classList.add("disabled");
+  attachments = [];
+  renderAttachments();
+  updateSendButtonState();
 
   showTyping();
 
   try {
-    const replyText = await sendToDirector(raw);
+    const replyText = await sendToDirector(displayText, attachmentMeta);
     clearTyping();
     addMessage("assistant", replyText);
   } catch (err) {
@@ -333,12 +371,7 @@ async function handleSend() {
 
 function initEvents() {
   composerInput.addEventListener("input", () => {
-    const hasText = composerInput.value.trim().length > 0;
-    if (hasText) {
-      sendBtn.classList.remove("disabled");
-    } else {
-      sendBtn.classList.add("disabled");
-    }
+    updateSendButtonState();
   });
 
   composerInput.addEventListener("keydown", (e) => {
@@ -360,11 +393,14 @@ function initEvents() {
     fileInput.click();
   });
 
+  // TODO: attachments 배열에 쌓인 파일들은 아직 서버로 전송되지 않는다.
+  // 나중에 /api/chat 확장 시 FormData 또는 별도 업로드 엔드포인트로 연동할 것.
   fileInput.addEventListener("change", (e) => {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
     attachments = attachments.concat(files);
     renderAttachments();
+    updateSendButtonState();
   });
 
   pinnedClearBtn.addEventListener("click", () => {
@@ -397,6 +433,7 @@ function init() {
   loadFromStorage();
   renderMessages();
   renderPinned();
+  updateSendButtonState();
   initEvents();
 }
 
