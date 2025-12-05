@@ -21,7 +21,6 @@
   <!-- (선택) 아이콘 파일이 있을 경우 이 경로에 두면 홈화면 아이콘 사용 가능 -->
   <link rel="apple-touch-icon" href="/static/icons/app-icon-192.png" />
   <!-- 안드로이드 주소창 색상 등 -->
-  <meta name="theme-color" content="#151713" />
   <style>
     :root {
       --vh: 1vh;
@@ -66,7 +65,9 @@
       background-size: cover;
       background-position: center;
       background-repeat: no-repeat;
+      background-attachment: fixed; /* 배경이 화면에 고정되도록 */
       position: relative;
+      min-height: 100vh; /* 세로가 짧을 때도 배경이 잘리거나 반복되지 않게 */
     }
 
     body.app-bg-forest::before {
@@ -78,8 +79,7 @@
       height: calc(env(safe-area-inset-top) + 80px);
       background: linear-gradient(
         to bottom,
-        rgba(6, 7, 6, 0.98),
-        rgba(6, 7, 6, 0.78),
+        rgba(6, 7, 6, 0.4),
         rgba(6, 7, 6, 0.0)
       );
       pointer-events: none;
