@@ -452,6 +452,20 @@
       font-size: 11px;
     }
 
+    .bubble-attachment.image {
+      padding: 0;
+      border-radius: 12px;
+      background: transparent;
+    }
+
+    .bubble-attachment-thumb {
+      display: block;
+      max-width: 180px;
+      max-height: 180px;
+      border-radius: 12px;
+      object-fit: cover;
+    }
+
     .msg-row.other .bubble-attachment {
       background: rgba(0, 0, 0, 0.03);
       color: var(--text-soft);
@@ -870,13 +884,24 @@
 
     // 뷰포트 높이 동기화: 키보드가 올라와도 .app 높이를 실제 화면에 맞게 조정
     function updateViewportHeight() {
-      const vh = window.innerHeight * 0.01;
+      const vv = window.visualViewport;
+      const height = vv ? vv.height : window.innerHeight;
+      const vh = height * 0.01;
       document.documentElement.style.setProperty("--vh", `${vh}px`);
     }
 
-    updateViewportHeight();
-    window.addEventListener("resize", updateViewportHeight);
-    window.addEventListener("orientationchange", updateViewportHeight);
+    // 초기 한 번 + iOS에서 키보드 열리고 닫힌 뒤 안정화용 한 번 더
+    window.addEventListener("load", () => {
+      updateViewportHeight();
+      setTimeout(updateViewportHeight, 150);
+    });
+
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", updateViewportHeight);
+    } else {
+      window.addEventListener("resize", updateViewportHeight);
+      window.addEventListener("orientationchange", updateViewportHeight);
+    }
 
     // 업로드 프로필 초기화 (localStorage에서 불러오기)
     if (uploadProfileSelect) {
@@ -1353,20 +1378,35 @@
 
         msg.attachments.forEach((att) => {
           const chip = document.createElement("div");
+          const kind = att.kind || (att.type && att.type.startsWith("image/") ? "image" : att.type && att.type.startsWith("video/") ? "video" : "file");
+
           chip.className = "bubble-attachment";
+          if (kind === "image") {
+            chip.classList.add("image");
+          }
 
-          const icon = document.createElement("span");
-          icon.className = "bubble-attachment-icon";
-          const kind = att.kind || (att.type && att.type.startsWith("image/") ? "image" : "file");
-          icon.textContent =
-            kind === "image" ? "🖼" : kind === "video" ? "🎬" : "📎";
+          if (kind === "image" && att.url) {
+            // 이미지의 경우 말풍선 안에 썸네일 미리보기
+            const img = document.createElement("img");
+            img.className = "bubble-attachment-thumb";
+            img.src = att.url;
+            img.alt = att.name || "image";
+            chip.appendChild(img);
+          } else {
+            // 그 외(파일/영상)는 기존처럼 아이콘 + 파일명 칩으로 표시
+            const icon = document.createElement("span");
+            icon.className = "bubble-attachment-icon";
+            icon.textContent =
+              kind === "image" ? "🖼" : kind === "video" ? "🎬" : "📎";
 
-          const label = document.createElement("span");
-          label.className = "bubble-attachment-name";
-          label.textContent = truncateFileName(att.name || "첨부파일");
+            const label = document.createElement("span");
+            label.className = "bubble-attachment-name";
+            label.textContent = truncateFileName(att.name || "첨부파일");
 
-          chip.appendChild(icon);
-          chip.appendChild(label);
+            chip.appendChild(icon);
+            chip.appendChild(label);
+          }
+
           attWrap.appendChild(chip);
         });
 
@@ -1430,14 +1470,27 @@
 
     async function renderHistory() {
       // 1순위: 서버 공용 히스토리
-      let msgs = await fetchServerHistory(1000);
+      const serverMsgs = await fetchServerHistory(1000);
+      const localMsgs = loadHistory();
 
-      // 서버에 아직 기록이 없다면 → 예전 localStorage 백업 사용
-      if (!msgs.length) {
-        msgs = loadHistory();
+      let merged = [];
+
+      if (serverMsgs.length || localMsgs.length) {
+        if (serverMsgs.length) {
+          // 서버에 이미 있는 메시지는 role + content + 형식화된 시간 기준으로 중복 제거
+          const keyOf = (m) => `${m.role}|${m.content}|${formatTime(m.timestamp)}`;
+          const existing = new Set(serverMsgs.map(keyOf));
+          const extras = Array.isArray(localMsgs)
+            ? localMsgs.filter((m) => !existing.has(keyOf(m)))
+            : [];
+          merged = serverMsgs.concat(extras);
+        } else {
+          // 서버가 비어 있으면 localStorage 백업만 사용
+          merged = Array.isArray(localMsgs) ? localMsgs : [];
+        }
       }
 
-      chatHistory = msgs;
+      chatHistory = merged;
       messagesInner.innerHTML = "";
 
       const total = chatHistory.length;
@@ -1447,7 +1500,7 @@
         appendMessageToDOM(chatHistory[i]);
       }
 
-      // 서버 기준으로 localStorage도 덮어써서 백업처럼 사용
+      // 병합 결과를 localStorage에도 저장해서 백업처럼 사용
       saveHistory();
       scrollToBottom();
     }
