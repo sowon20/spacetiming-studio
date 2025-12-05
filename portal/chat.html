@@ -738,29 +738,25 @@
       scrollbar-width: thin;
       scrollbar-color: rgba(90, 99, 91, 0.55) transparent;
     }
-    /* 가로 모드에서는 전체 앱 숨기고 경고만 표시 */
-.landscape-warning {
-  display: none;
-}
+    /* 가로 모드 안내 텍스트 (현재는 사용 안 함, 앱은 항상 표시) */
+    .landscape-warning {
+      display: none;
+    }
 
-@media (orientation: landscape) and (max-width: 900px) {
-  .app {
-    display: none;
-  }
-
-  .landscape-warning {
-    position: fixed;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 16px;
-    background: rgba(10, 10, 10, 0.9);
-    color: #f4f0ea;
-    font-size: 14px;
-    text-align: center;
-  }
-}
+    @media (orientation: landscape) and (max-width: 900px) {
+      .landscape-warning {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+        background: rgba(10, 10, 10, 0.9);
+        color: #f4f0ea;
+        font-size: 14px;
+        text-align: center;
+      }
+    }
   </style>
 </head>
 <body class="app-bg-forest">

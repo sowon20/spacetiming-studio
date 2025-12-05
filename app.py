@@ -5,6 +5,7 @@ import json
 import requests
 from pathlib import Path
 from typing import List, Optional
+from datetime import datetime
 
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
@@ -69,6 +70,9 @@ HISTORY_FILES = [
     "portal_history/sowon.chat.mac.jsonl",
 ]
 
+HISTORY_WRITE_FILE = Path("portal_history") / "sowon.chat.jsonl"
+HISTORY_WRITE_FILE.parent.mkdir(parents=True, exist_ok=True)
+
 
 def _load_history(limit: int = 400) -> List[HistoryItem]:
     items_by_key: dict[str, HistoryItem] = {}
@@ -113,6 +117,28 @@ def _load_history(limit: int = 400) -> List[HistoryItem]:
     # 최신 순으로 정렬 후 limit만큼 자르기
     items_sorted = sorted(items_by_key.values(), key=lambda x: x.id)[-limit:]
     return items_sorted
+
+
+# 서버 공용 히스토리 파일(포털 기준)에 한 줄 추가.
+def _append_history(role: str, text: str) -> None:
+    """
+    서버 공용 히스토리 파일(포털 기준)에 한 줄 추가.
+    - /api/history 에서 읽어가는 sowon.chat.jsonl 파일에 작성한다.
+    """
+    ts = datetime.utcnow().isoformat(timespec="seconds")
+    item = {
+        "id": ts,
+        "role": role,
+        "text": text,
+        "timestamp": ts,
+    }
+    try:
+        with HISTORY_WRITE_FILE.open("a", encoding="utf-8") as f:
+            json.dump(item, f, ensure_ascii=False)
+            f.write("\n")
+    except Exception:
+        # 히스토리 기록 실패는 채팅 자체를 막지는 않는다.
+        pass
 
 
 app = FastAPI()
@@ -201,6 +227,20 @@ async def chat(req: ChatRequest):
             status_code=500,
             detail="director_core 응답에 reply 필드가 비어 있음",
         )
+
+    # 히스토리 파일에 이번 턴 기록 (마지막 user 발화 + assistant 응답)
+    try:
+        last_user = None
+        for m in reversed(req.messages):
+            if m.role == "user":
+                last_user = m
+                break
+        if last_user is not None:
+            _append_history("user", last_user.content)
+        _append_history("assistant", reply)
+    except Exception:
+        # 히스토리 기록 실패는 채팅 응답 자체를 막지 않는다.
+        pass
 
     return ChatResponse(reply=reply)
 
