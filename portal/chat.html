@@ -44,7 +44,7 @@
       margin: 0;
       padding: 0;
       height: 100%;
-      overflow-y: auto; /* 페이지 전체도 약간은 스크롤 가능하게 (키보드가 올라와도 상단 패널을 다시 볼 수 있도록) */
+      overflow-y: hidden; /* 전체 페이지는 스크롤 막고 */
       overflow-x: hidden;
       font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
       color: var(--text-main);
@@ -1447,101 +1447,7 @@
       isLoadingOlder = false;
     }
 
-    // --- 위로 올려서 새로고침 (대화 맨 아래 기준, 비상용) ---
-    const PULL_THRESHOLD = 60; // px
-    let pullStartY = null;
-    let pullDelta = 0;
-    let isPulling = false;
-
-    function isAtBottom() {
-      if (!messagesEl) return false;
-      const tolerance = 2;
-      return (
-        messagesEl.scrollTop + messagesEl.clientHeight >=
-        messagesEl.scrollHeight - tolerance
-      );
-    }
-
-    function resetPullIndicator() {
-      if (!pullIndicator) return;
-      pullIndicator.classList.remove("show", "ready");
-      pullIndicator.textContent = "↑ 올려서 새로고침";
-    }
-
-    function triggerHardRefresh() {
-      // 비상용: 페이지 전체 새로고침
-      window.location.reload();
-    }
-
-    if (messagesEl && pullIndicator) {
-      messagesEl.addEventListener(
-        "touchstart",
-        (e) => {
-          if (!isAtBottom()) {
-            pullStartY = null;
-            isPulling = false;
-            return;
-          }
-          if (!e.touches || !e.touches.length) return;
-          pullStartY = e.touches[0].clientY;
-          pullDelta = 0;
-          isPulling = true;
-        },
-        { passive: true }
-      );
-
-      messagesEl.addEventListener(
-        "touchmove",
-        (e) => {
-          if (!isPulling || pullStartY === null) return;
-          if (!e.touches || !e.touches.length) return;
-
-          const currentY = e.touches[0].clientY;
-          // 아래에서 위로 올릴 때: 손가락이 위로 가니까 값이 작아짐
-          pullDelta = pullStartY - currentY;
-
-          if (pullDelta <= 0 || !isAtBottom()) {
-            resetPullIndicator();
-            return;
-          }
-
-          pullIndicator.classList.add("show");
-
-          if (pullDelta >= PULL_THRESHOLD) {
-            pullIndicator.classList.add("ready");
-            pullIndicator.textContent = "↻ 놓으면 새로고침";
-          } else {
-            pullIndicator.classList.remove("ready");
-            pullIndicator.textContent = "↑ 올려서 새로고침";
-          }
-        },
-        { passive: true }
-      );
-
-      const endPull = () => {
-        if (!isPulling) {
-          pullStartY = null;
-          pullDelta = 0;
-          resetPullIndicator();
-          return;
-        }
-
-        const isReady =
-          pullDelta >= PULL_THRESHOLD && pullIndicator.classList.contains("ready");
-
-        pullStartY = null;
-        pullDelta = 0;
-        isPulling = false;
-        resetPullIndicator();
-
-        if (isReady) {
-          triggerHardRefresh();
-        }
-      };
-
-      messagesEl.addEventListener("touchend", endPull);
-      messagesEl.addEventListener("touchcancel", endPull);
-    }
+    // (pull-to-refresh 메시지 영역 관련 코드 제거됨)
 
     if (messagesEl) {
       messagesEl.addEventListener("scroll", () => {
