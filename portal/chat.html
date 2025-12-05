@@ -44,7 +44,7 @@
       margin: 0;
       padding: 0;
       height: 100%;
-      overflow-y: hidden; /* 전체 페이지는 스크롤 막고 */
+      overflow-y: hidden; /* 홈앱 기준: 전체 페이지는 스크롤 막고, 채팅 영역만 스크롤 */
       overflow-x: hidden;
       font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
       color: var(--text-main);
@@ -796,7 +796,7 @@
       <div class="messages-inner" id="messagesInner">
         <!-- 실제 메시지는 JS에서 렌더링 -->
       </div>
-      <div class="pull-indicator" id="pullIndicator">↑ 올려서 새로고침</div>
+      <div class="pull-indicator" id="pullIndicator">↑ 위로 올리면 이전 대화 보기</div>
     </main>
 
     <!-- 입력 영역 -->
@@ -865,6 +865,7 @@
     let visibleStartIndex = 0;
     let isLoadingOlder = false;
     let currentBgObjectUrl = null;
+    let isSending = false; // 엔터/버튼 중복 입력으로 인한 중복 전송 방지
 
     // 업로드 프로필 초기화 (localStorage에서 불러오기)
     if (uploadProfileSelect) {
@@ -1430,22 +1431,42 @@
 
       visibleStartIndex = prevStart;
 
-      const newScrollHeight = messagesEl.scrollHeight;
-      const heightDiff = newScrollHeight - prevScrollHeight;
-      messagesEl.scrollTop = prevScrollTop + heightDiff;
+  const newScrollHeight = messagesEl.scrollHeight;
+  const heightDiff = newScrollHeight - prevScrollHeight;
+  messagesEl.scrollTop = prevScrollTop + heightDiff;
 
-      isLoadingOlder = false;
-    }
+  isLoadingOlder = false;
+
+  if (pullIndicator) {
+    pullIndicator.textContent = "↑ 위로 올리면 이전 대화 보기";
+  }
+}
 
     // (pull-to-refresh 메시지 영역 관련 코드 제거됨)
 
     if (messagesEl) {
-      messagesEl.addEventListener("scroll", () => {
-        if (messagesEl.scrollTop <= 40 && !isLoadingOlder && visibleStartIndex > 0) {
-          loadOlderMessages();
-        }
-      });
+  messagesEl.addEventListener("scroll", () => {
+    const nearTop = messagesEl.scrollTop <= 40;
+    const hasMore = visibleStartIndex > 0;
+
+    if (nearTop && hasMore) {
+      if (pullIndicator) {
+        pullIndicator.classList.add("show");
+        pullIndicator.textContent = isLoadingOlder
+          ? "이전 대화 불러오는 중…"
+          : "↑ 위로 올리면 이전 대화 보기";
+      }
+
+      if (!isLoadingOlder) {
+        loadOlderMessages();
+      }
+    } else {
+      if (pullIndicator) {
+        pullIndicator.classList.remove("show");
+      }
     }
+  });
+}
 
     function scrollToBottom() {
       if (!messagesEl) return;
@@ -1487,6 +1508,10 @@
       const text = rawText.trim();
 
       if (!text && !pendingAttachments.length) return;
+
+      // 이미 전송 처리 중이라면 중복 호출 무시
+      if (isSending) return;
+      isSending = true;
 
       // 첨부파일 이름을 내용에 함께 표기 (나중에 백엔드에서 활용 가능)
       const attachmentNames = pendingAttachments.map((att) => att.file?.name || "첨부파일");
@@ -1575,6 +1600,8 @@
         appendMessageToDOM(errorMsg);
         saveHistory();
         scrollToBottom();
+      } finally {
+        isSending = false;
       }
     }
 
