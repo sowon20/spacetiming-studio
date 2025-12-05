@@ -3,9 +3,10 @@ from __future__ import annotations
 import os
 import json
 import requests
+from pathlib import Path
 from typing import List, Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -15,6 +16,7 @@ DIRECTOR_CORE_URL = os.getenv(
     "DIRECTOR_CORE_URL",
     "http://127.0.0.1:8897",  # 기본값: 라즈베리 로컬에서 director_server_v1
 )
+UPLOAD_ROOT = Path(os.getenv("UPLOAD_ROOT", "uploads")).resolve()
 
 
 class ChatMessage(BaseModel):
@@ -31,10 +33,26 @@ class AttachmentMeta(BaseModel):
 class ChatRequest(BaseModel):
     messages: List[ChatMessage]
     attachments: Optional[List[AttachmentMeta]] = None
+    upload_profile: Optional[str] = "local_default"
 
 
 class ChatResponse(BaseModel):
     reply: str
+
+
+def get_upload_dir(profile: str) -> Path:
+    """
+    업로드 프로필 이름에 따라 실제 저장 디렉토리를 결정한다.
+    - 기본값: uploads/<profile>/
+    - 디렉토리가 없으면 생성한다.
+    """
+    safe_profile = profile or "local_default"
+    # 너무 긴 문자/공백은 간단히 정리
+    safe_profile = safe_profile.strip() or "local_default"
+    safe_profile = safe_profile.replace("..", "_").replace("/", "_")
+    target = UPLOAD_ROOT / safe_profile
+    target.mkdir(parents=True, exist_ok=True)
+    return target
 
 
 class HistoryItem(BaseModel):
@@ -146,11 +164,15 @@ async def chat(req: ChatRequest):
     - 여기서 director_core(8897)로 그대로 포워딩
     - 부감독 뇌의 reply만 꺼내서 반환
     """
-    # 첨부 파일 메타정보는 req.attachments 로 들어온다. 아직은 director_core로 포워딩하지 않고 서버에서만 보존한다.
+    # 첨부 파일 메타정보는 req.attachments 로 들어온다.
+    # 현재는 director_core(/chat) 호출 시 messages와 함께 attachments 메타만 포워딩하고,
+    # upload_profile 값은 나중에 업로드 엔드포인트(/api/upload) 구현 시 사용할 예정으로 여기서는 보존만 한다.
     # director_core_v1 형식으로 변환
     payload = {
-        "messages": [m.model_dump() for m in req.messages]
+        "messages": [m.model_dump() for m in req.messages],
     }
+    if req.attachments:
+        payload["attachments"] = [a.model_dump() for a in req.attachments]
 
     try:
         resp = requests.post(
@@ -177,11 +199,55 @@ async def chat(req: ChatRequest):
 
     return ChatResponse(reply=reply)
 
+
+@app.post("/api/upload")
+async def upload_files(
+    files: List[UploadFile] = File(...),
+    upload_profile: str = Form("local_default"),
+):
+    """
+    첨부 파일 실제 업로드 엔드포인트.
+    - 프론트에서 FormData로 파일들 + upload_profile 을 보낸다.
+    - uploads/<upload_profile>/ 아래에 저장하고, /uploads/... 경로를 돌려준다.
+    """
+    upload_dir = get_upload_dir(upload_profile)
+    results: list[dict] = []
+
+    for uf in files:
+        original_name = uf.filename or "file"
+        # 너무 긴 이름/경로 관련 문자를 간단히 정리
+        safe_name = original_name.replace("/", "_").replace("\\", "_")
+        target_path = upload_dir / safe_name
+
+        try:
+            with target_path.open("wb") as out_f:
+                content = await uf.read()
+                out_f.write(content)
+        finally:
+            await uf.close()
+
+        # 정적 서빙용 URL (/uploads 마운트 기준)
+        rel_path = target_path.relative_to(UPLOAD_ROOT)
+        url = f"/uploads/{rel_path.as_posix()}"
+
+        results.append(
+            {
+                "name": original_name,
+                "saved_as": safe_name,
+                "url": url,
+                "upload_profile": upload_profile,
+            }
+        )
+
+    return {"files": results}
+
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 # 정적 파일(스타일/JS) 서빙
 app.mount("/static", StaticFiles(directory="portal", html=False), name="static")
+# 업로드 파일 서빙 (/uploads/ 경로 아래에서 접근)
+app.mount("/uploads", StaticFiles(directory=str(UPLOAD_ROOT), html=False), name="uploads")
 
 # chat.html 직접 서빙
 @app.get("/chat.html")

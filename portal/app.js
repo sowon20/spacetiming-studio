@@ -4,6 +4,8 @@
 // - STORAGE_KEY: RESET_FLOW.md 에서 설명한 localStorage 키와 맞춰서 관리한다.
 
 const DIRECTOR_API_URL = "/api/chat";
+const UPLOAD_API_URL = "/api/upload";
+const DEFAULT_UPLOAD_PROFILE = "local_default";
 
 const chatListEl = document.getElementById("chat-list");
 const sessionMetaEl = document.getElementById("session-meta");
@@ -295,7 +297,33 @@ function renderAttachments() {
   updateSendButtonState();
 }
 
+async function uploadAttachments(files) {
+  if (!files || !files.length) {
+    return null;
+  }
+
+  const formData = new FormData();
+  files.forEach((file) => {
+    formData.append("files", file);
+  });
+  formData.append("upload_profile", DEFAULT_UPLOAD_PROFILE);
+
+  const res = await fetch(UPLOAD_API_URL, {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!res.ok) {
+    throw new Error(`Upload failed (HTTP ${res.status})`);
+  }
+
+  const data = await res.json();
+  return data;
+}
+
 async function sendToDirector(text, attachmentMeta) {
+  // 첨부 파일 메타정보(이름/타입/크기/URL)는 payload.attachments에 넣어서 서버로 함께 보낸다.
+  // 실제 바이너리 업로드는 /api/upload 에서 처리하고, 여기서는 메타만 전달한다.
   const payload = {
     messages: [
       {
@@ -331,33 +359,58 @@ async function handleSend() {
   if (isSending) return;
 
   const raw = composerInput.value.trim();
-  if (!raw) return;
+  const hasText = raw.length > 0;
+  const hasAttachments = attachments.length > 0;
+  if (!hasText && !hasAttachments) return;
 
-  isSending = true;  // 잠금
+  isSending = true; // 잠금
 
-  // 첨부 파일 메타정보 구성
-  const attachmentMeta = attachments.map((f) => ({
-    name: f.name,
-    type: f.type,
-    size: f.size,
-  }));
-
-  // 사용자에게 보여줄 텍스트에는 첨부 파일 목록을 한 줄로 덧붙인다.
-  const attachmentNote =
-    attachmentMeta.length > 0
-      ? `\n\n[첨부 파일: ${attachmentMeta.map((a) => a.name).join(", ")}]`
-      : "";
-  const displayText = raw + attachmentNote;
-
-  addMessage("user", displayText);
-  composerInput.value = "";
-  attachments = [];
-  renderAttachments();
-  updateSendButtonState();
-
-  showTyping();
+  // 업로드할 파일 스냅샷
+  const filesToUpload = attachments.slice();
+  let attachmentMeta = [];
 
   try {
+    // 1) 첨부 파일이 있으면 먼저 /api/upload 로 업로드
+    let uploaded = null;
+    if (filesToUpload.length > 0) {
+      try {
+        uploaded = await uploadAttachments(filesToUpload);
+      } catch (uploadErr) {
+        console.warn("upload failed, continue without URLs", uploadErr);
+      }
+
+      const uploadedFiles = uploaded && Array.isArray(uploaded.files) ? uploaded.files : [];
+
+      attachmentMeta = filesToUpload.map((f, idx) => {
+        const info = uploadedFiles[idx] || {};
+        const url = info.url ? info.url : null;
+        return {
+          name: info.name || f.name,
+          type: f.type || null,
+          size: typeof f.size === "number" ? f.size : null,
+          url,
+          upload_profile: info.upload_profile || DEFAULT_UPLOAD_PROFILE,
+        };
+      });
+    }
+
+    // 2) 사용자에게 보여줄 텍스트에는 첨부 파일 목록만 한 줄로 덧붙인다.
+    const attachmentNote =
+      attachmentMeta.length > 0
+        ? `\n\n[첨부 파일: ${attachmentMeta.map((a) => a.name).join(", ")}]`
+        : "";
+
+    const displayText = (raw || "") + attachmentNote;
+
+    addMessage("user", displayText);
+    composerInput.value = "";
+    attachments = [];
+    renderAttachments();
+    updateSendButtonState();
+
+    showTyping();
+
+    // 3) 부감독에게는 텍스트 + 메타정보를 함께 보낸다.
     const replyText = await sendToDirector(displayText, attachmentMeta);
     clearTyping();
     addMessage("assistant", replyText);
@@ -368,6 +421,41 @@ async function handleSend() {
     isSending = false; // 해제
   }
 }
+
+// attachments 배열에 쌓인 파일들은 handleSend()에서 /api/upload 로 업로드된다.
+// 여기서는 단순히 목록/미리보기만 관리한다.
+fileInput.addEventListener("change", (e) => {
+  const files = Array.from(e.target.files || []);
+  if (!files.length) return;
+  attachments = attachments.concat(files);
+  renderAttachments();
+  updateSendButtonState();
+});
+
+pinnedClearBtn.addEventListener("click", () => {
+  pinnedId = null;
+  saveToStorage();
+  renderPinned();
+});
+
+pinnedContentBtn.addEventListener("click", () => {
+  if (!pinnedId) return;
+  const msg = messages.find((m) => m.id === pinnedId);
+  if (!msg) return;
+  pinModalBody.innerHTML = renderContent(msg.content);
+  pinModalMeta.textContent = `${msg.role === "user" ? "소원" : "부감독"} · ${msg.time}`;
+  pinModalBackdrop.classList.add("open");
+});
+
+pinModalClose.addEventListener("click", () => {
+  pinModalBackdrop.classList.remove("open");
+});
+
+pinModalBackdrop.addEventListener("click", (e) => {
+  if (e.target === pinModalBackdrop) {
+    pinModalBackdrop.classList.remove("open");
+  }
+});
 
 function initEvents() {
   composerInput.addEventListener("input", () => {
@@ -391,41 +479,6 @@ function initEvents() {
 
   attachBtn.addEventListener("click", () => {
     fileInput.click();
-  });
-
-  // TODO: attachments 배열에 쌓인 파일들은 아직 서버로 전송되지 않는다.
-  // 나중에 /api/chat 확장 시 FormData 또는 별도 업로드 엔드포인트로 연동할 것.
-  fileInput.addEventListener("change", (e) => {
-    const files = Array.from(e.target.files || []);
-    if (!files.length) return;
-    attachments = attachments.concat(files);
-    renderAttachments();
-    updateSendButtonState();
-  });
-
-  pinnedClearBtn.addEventListener("click", () => {
-    pinnedId = null;
-    saveToStorage();
-    renderPinned();
-  });
-
-  pinnedContentBtn.addEventListener("click", () => {
-    if (!pinnedId) return;
-    const msg = messages.find((m) => m.id === pinnedId);
-    if (!msg) return;
-    pinModalBody.innerHTML = renderContent(msg.content);
-    pinModalMeta.textContent = `${msg.role === "user" ? "소원" : "부감독"} · ${msg.time}`;
-    pinModalBackdrop.classList.add("open");
-  });
-
-  pinModalClose.addEventListener("click", () => {
-    pinModalBackdrop.classList.remove("open");
-  });
-
-  pinModalBackdrop.addEventListener("click", (e) => {
-    if (e.target === pinModalBackdrop) {
-      pinModalBackdrop.classList.remove("open");
-    }
   });
 }
 
