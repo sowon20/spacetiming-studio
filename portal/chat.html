@@ -1486,6 +1486,18 @@
         }
       }
 
+      // 타임스탬프 기준으로 오래된 것 → 최신 순으로 정렬
+      if (merged.length) {
+        merged.sort((a, b) => {
+          const ta = a.timestamp ?? 0;
+          const tb = b.timestamp ?? 0;
+          // 문자열(ISO)인 경우에도 Date 비교로 보정
+          const da = typeof ta === "string" ? new Date(ta).getTime() : ta;
+          const db = typeof tb === "string" ? new Date(tb).getTime() : tb;
+          return da - db;
+        });
+      }
+
       chatHistory = merged;
       messagesInner.innerHTML = "";
 
