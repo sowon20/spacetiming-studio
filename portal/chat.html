@@ -7,6 +7,14 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
+  <!-- iOS 홈 화면 / 풀스크린용 메타 -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Spacetime Director" />
+  <!-- (선택) 아이콘 파일이 있을 경우 이 경로에 두면 홈화면 아이콘 사용 가능 -->
+  <link rel="apple-touch-icon" href="/static/icons/app-icon-192.png" />
+  <!-- 안드로이드 주소창 색상 등 -->
+  <meta name="theme-color" content="#151713" />
   <style>
     :root {
       --vh: 1vh;
@@ -49,7 +57,7 @@
     }
 
     .app {
-      height: 95vh; /* 화면 높이 = 앱 높이 */
+      height: 95vh; /* iOS 키보드 대응용, 거의 전체 화면 */
       padding: 12px 12px calc(12px + env(safe-area-inset-bottom));
       display: flex;
       flex-direction: column;
