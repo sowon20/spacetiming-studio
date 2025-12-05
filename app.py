@@ -241,7 +241,7 @@ async def upload_files(
 
     return {"files": results}
 
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 # 정적 파일(스타일/JS) 서빙
@@ -249,7 +249,5 @@ app.mount("/static", StaticFiles(directory="portal", html=False), name="static")
 # 업로드 파일 서빙 (/uploads/ 경로 아래에서 접근)
 app.mount("/uploads", StaticFiles(directory=str(UPLOAD_ROOT), html=False), name="uploads")
 
-# chat.html 직접 서빙
-@app.get("/chat.html")
-async def chat_page():
-    return FileResponse("portal/chat.html")
+# portal 폴더 전체를 /portal 아래에 그대로 매핑
+app.mount("/portal", StaticFiles(directory="portal", html=True), name="portal_html")
