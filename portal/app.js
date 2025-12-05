@@ -27,6 +27,49 @@ let isSending = false;
 
 const STORAGE_KEY = "director_chat_messages_v1";
 
+function escapeHtml(str) {
+  if (str === null || str === undefined) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function renderContent(raw) {
+  if (raw === null || raw === undefined) return "";
+  let text = String(raw);
+
+  // 1) HTML 이스케이프 먼저
+  text = escapeHtml(text);
+
+  // 2) URL → 링크/이미지 미리보기
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  text = text.replace(urlRegex, (url) => {
+    const lower = url.toLowerCase();
+    const isImage =
+      lower.endsWith(".png") ||
+      lower.endsWith(".jpg") ||
+      lower.endsWith(".jpeg") ||
+      lower.endsWith(".gif") ||
+      lower.endsWith(".webp");
+
+    if (isImage) {
+      return `<a href="${url}" target="_blank" rel="noopener noreferrer"><img src="${url}" alt="" /></a>`;
+    }
+    return `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`;
+  });
+
+  // 3) **굵게** 처리
+  text = text.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+
+  // 4) 줄바꿈 → <br>
+  text = text.replace(/\n/g, "<br>");
+
+  return text;
+}
+
 function nowTime() {
   const d = new Date();
   const hh = d.getHours().toString().padStart(2, "0");
@@ -130,7 +173,7 @@ function renderMessages() {
 
     const bubble = document.createElement("div");
     bubble.className = "msg-bubble";
-    bubble.textContent = m.content;
+    bubble.innerHTML = renderContent(m.content);
 
     bubbleWrap.appendChild(bubble);
 
@@ -332,7 +375,7 @@ function initEvents() {
     if (!pinnedId) return;
     const msg = messages.find((m) => m.id === pinnedId);
     if (!msg) return;
-    pinModalBody.textContent = msg.content;
+    pinModalBody.innerHTML = renderContent(msg.content);
     pinModalMeta.textContent = `${msg.role === "user" ? "소원" : "부감독"} · ${msg.time}`;
     pinModalBackdrop.classList.add("open");
   });
