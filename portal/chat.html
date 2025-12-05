@@ -693,6 +693,10 @@
     const STORAGE_KEY = "director_chat_messages_v2";
     let chatHistory = [];
     let pendingAttachments = [];
+    const INITIAL_HISTORY_BATCH = 80;
+    const HISTORY_PAGE_SIZE = 80;
+    let visibleStartIndex = 0;
+    let isLoadingOlder = false;
 
     async function fetchServerHistory(limit = 200) {
       try {
@@ -925,7 +929,7 @@
       }
     }
 
-    function appendMessageToDOM(msg) {
+    function buildMessageRowElement(msg) {
       const row = document.createElement("div");
       row.className = "msg-row " + (msg.role === "assistant" ? "other" : "me");
 
@@ -967,12 +971,24 @@
       wrap.appendChild(meta);
       wrap.appendChild(menu);
       row.appendChild(wrap);
-      messagesInner.appendChild(row);
+      return row;
+    }
+
+    function appendMessageToDOM(msg, options = {}) {
+      const { prepend = false } = options;
+      const row = buildMessageRowElement(msg);
+      if (prepend && messagesInner.firstChild) {
+        messagesInner.insertBefore(row, messagesInner.firstChild);
+      } else if (prepend) {
+        messagesInner.appendChild(row);
+      } else {
+        messagesInner.appendChild(row);
+      }
     }
 
     async function renderHistory() {
       // 1순위: 서버 공용 히스토리
-      let msgs = await fetchServerHistory(200);
+      let msgs = await fetchServerHistory(1000);
 
       // 서버에 아직 기록이 없다면 → 예전 localStorage 백업 사용
       if (!msgs.length) {
@@ -981,10 +997,41 @@
 
       chatHistory = msgs;
       messagesInner.innerHTML = "";
-      chatHistory.forEach((msg) => appendMessageToDOM(msg));
+
+      const total = chatHistory.length;
+      visibleStartIndex = Math.max(0, total - INITIAL_HISTORY_BATCH);
+
+      for (let i = visibleStartIndex; i < total; i++) {
+        appendMessageToDOM(chatHistory[i]);
+      }
+
       // 서버 기준으로 localStorage도 덮어써서 백업처럼 사용
       saveHistory();
       scrollToBottom();
+    }
+
+    async function loadOlderMessages() {
+      if (isLoadingOlder) return;
+      if (!messagesEl) return;
+      if (visibleStartIndex <= 0) return;
+
+      isLoadingOlder = true;
+
+      const prevStart = Math.max(0, visibleStartIndex - HISTORY_PAGE_SIZE);
+      const prevScrollTop = messagesEl.scrollTop;
+      const prevScrollHeight = messagesEl.scrollHeight;
+
+      for (let i = visibleStartIndex - 1; i >= prevStart; i--) {
+        appendMessageToDOM(chatHistory[i], { prepend: true });
+      }
+
+      visibleStartIndex = prevStart;
+
+      const newScrollHeight = messagesEl.scrollHeight;
+      const heightDiff = newScrollHeight - prevScrollHeight;
+      messagesEl.scrollTop = prevScrollTop + heightDiff;
+
+      isLoadingOlder = false;
     }
 
     // --- 위로 올려서 새로고침 (대화 맨 아래 기준, 비상용) ---
@@ -1081,6 +1128,14 @@
 
       messagesEl.addEventListener("touchend", endPull);
       messagesEl.addEventListener("touchcancel", endPull);
+    }
+
+    if (messagesEl) {
+      messagesEl.addEventListener("scroll", () => {
+        if (messagesEl.scrollTop <= 40 && !isLoadingOlder && visibleStartIndex > 0) {
+          loadOlderMessages();
+        }
+      });
     }
 
     function scrollToBottom() {
