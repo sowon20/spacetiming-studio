@@ -237,11 +237,14 @@
       overflow-x: hidden;
       -webkit-overflow-scrolling: touch;
       font-size: 13px;
+      position: relative;
     }
     /* 위로 끌어서 새로고침 표시 */
     .pull-indicator {
-      position: sticky;
-      bottom: 0;
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 10px;
       text-align: center;
       font-size: 11px;
       padding: 4px 0;
