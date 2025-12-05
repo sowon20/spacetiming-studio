@@ -1413,7 +1413,28 @@
 
         msg.attachments.forEach((att) => {
           const chip = document.createElement("div");
-          const kind = att.kind || (att.type && att.type.startsWith("image/") ? "image" : att.type && att.type.startsWith("video/") ? "video" : "file");
+
+          // kind / type / 파일 확장자를 기반으로 이미지 여부 판별
+          let kind = att.kind || "file";
+          const type = typeof att.type === "string" ? att.type : "";
+
+          // type이 비어 있으면 파일 이름 확장자로 추론
+          let ext = "";
+          if (att.name && typeof att.name === "string" && att.name.includes(".")) {
+            const parts = att.name.split(".");
+            ext = parts[parts.length - 1].toLowerCase();
+          }
+          const isExtImage = ["jpg", "jpeg", "png", "gif", "webp", "heic", "heif", "bmp"].includes(ext);
+
+          if (!att.kind) {
+            if (type.startsWith("image/") || (!type && isExtImage)) {
+              kind = "image";
+            } else if (type.startsWith("video/")) {
+              kind = "video";
+            } else {
+              kind = "file";
+            }
+          }
 
           chip.className = "bubble-attachment";
           if (kind === "image") {
@@ -1426,9 +1447,13 @@
             img.className = "bubble-attachment-thumb";
             img.src = att.url;
             img.alt = att.name || "image";
+            // 클릭 시 새 탭으로 크게 보기
+            img.addEventListener("click", () => {
+              window.open(att.url, "_blank");
+            });
             chip.appendChild(img);
           } else {
-            // 그 외(파일/영상)는 기존처럼 아이콘 + 파일명 칩으로 표시
+            // 그 외(파일/영상)는 아이콘 + 파일명 칩으로 표시
             const icon = document.createElement("span");
             icon.className = "bubble-attachment-icon";
             icon.textContent =

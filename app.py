@@ -62,7 +62,8 @@ class HistoryItem(BaseModel):
     id: str
     role: str
     content: str
-    time: str
+    timestamp: str
+    attachments: Optional[list[dict]] = None
 
 
 HISTORY_FILES = [
@@ -92,13 +93,12 @@ def _load_history(limit: int = 400) -> List[HistoryItem]:
                     text = data.get("text") or ""
                     ts = data.get("timestamp") or ""
                     msg_id = data.get("id") or ts or ""
-                    # 시간 포맷에서 HH:MM만 뽑기
-                    t_display = ""
-                    if isinstance(ts, str) and ts:
-                        # 예: 2025-11-26T00:17:09
-                        parts = ts.split("T")
-                        if len(parts) == 2 and ":" in parts[1]:
-                            t_display = parts[1][:5]
+
+                    # 첨부 정보가 있으면 그대로 보존 (attachments 또는 files 키)
+                    attachments = None
+                    raw_att = data.get("attachments") or data.get("files")
+                    if isinstance(raw_att, list):
+                        attachments = raw_att
 
                     # sowon.chat / sowon.chat.mac 에서 동일 발화가 중복되는 걸 막기 위한 키
                     key = f"{msg_id}|{role}|{text}"
@@ -106,7 +106,8 @@ def _load_history(limit: int = 400) -> List[HistoryItem]:
                         id=msg_id or key,
                         role=role,
                         content=text,
-                        time=t_display,
+                        timestamp=ts,
+                        attachments=attachments,
                     )
         except FileNotFoundError:
             continue
@@ -120,18 +121,22 @@ def _load_history(limit: int = 400) -> List[HistoryItem]:
 
 
 # 서버 공용 히스토리 파일(포털 기준)에 한 줄 추가.
-def _append_history(role: str, text: str) -> None:
+def _append_history(role: str, text: str, attachments: Optional[list[dict]] = None) -> None:
     """
     서버 공용 히스토리 파일(포털 기준)에 한 줄 추가.
     - /api/history 에서 읽어가는 sowon.chat.jsonl 파일에 작성한다.
+    - attachments 가 있으면 그대로 기록해서 나중에 이미지/파일 썸네일을 복원할 수 있게 한다.
     """
-    ts = datetime.utcnow().isoformat(timespec="seconds")
-    item = {
+    ts = datetime.now().isoformat(timespec="seconds")
+    item: dict = {
         "id": ts,
         "role": role,
         "text": text,
         "timestamp": ts,
     }
+    if attachments:
+        item["attachments"] = attachments
+
     try:
         with HISTORY_WRITE_FILE.open("a", encoding="utf-8") as f:
             json.dump(item, f, ensure_ascii=False)
@@ -235,8 +240,15 @@ async def chat(req: ChatRequest):
             if m.role == "user":
                 last_user = m
                 break
+
+        # 현재 턴에서 사용된 첨부 메타 (있다면 그대로 기록)
+        att_list: Optional[list[dict]] = None
+        if req.attachments:
+            att_list = [a.model_dump() for a in req.attachments]
+
         if last_user is not None:
-            _append_history("user", last_user.content)
+            _append_history("user", last_user.content, att_list)
+
         _append_history("assistant", reply)
     except Exception:
         # 히스토리 기록 실패는 채팅 응답 자체를 막지 않는다.
