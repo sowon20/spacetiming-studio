@@ -238,7 +238,28 @@
       -webkit-overflow-scrolling: touch;
       font-size: 13px;
     }
+    /* 위로 끌어서 새로고침 표시 */
+    .pull-indicator {
+      position: sticky;
+      top: 0;
+      text-align: center;
+      font-size: 11px;
+      padding: 4px 0;
+      color: var(--text-soft);
+      opacity: 0;
+      transform: translateY(-8px);
+      transition: opacity 0.15s ease, transform 0.15s ease, color 0.15s ease;
+      pointer-events: none;
+    }
 
+    .pull-indicator.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .pull-indicator.ready {
+      color: #f7e3a2;
+    }
     .messages-inner {
       padding: 4px 4px 72px;
     }
@@ -618,6 +639,7 @@
 
     <!-- 메시지 영역 -->
     <main class="messages" id="messages">
+      <div class="pull-indicator" id="pullIndicator">↓ 당겨서 새로고침</div>
       <div class="messages-inner" id="messagesInner">
         <!-- 실제 메시지는 JS에서 렌더링 -->
       </div>
@@ -660,6 +682,8 @@
     const attachStrip = document.getElementById("attachStrip");
     const attachStripInner = document.getElementById("attachStripInner");
     const fileInput = document.getElementById("fileInput");
+    const messagesEl = document.getElementById("messages");
+    const pullIndicator = document.getElementById("pullIndicator");
 
     const TYPING_ROW_ID = "assistant-typing";
 
@@ -894,9 +918,92 @@
       scrollToBottom();
     }
 
+    // --- 위로 끌어서 새로고침 (비상용) ---
+    const PULL_THRESHOLD = 60; // px
+    let pullStartY = null;
+    let isPulling = false;
+
+    function resetPullIndicator() {
+      if (!pullIndicator) return;
+      pullIndicator.classList.remove("show", "ready");
+      pullIndicator.textContent = "↓ 당겨서 새로고침";
+    }
+
+    function triggerHardRefresh() {
+      // 비상용: 페이지 전체 새로고침
+      window.location.reload();
+    }
+
+    if (messagesEl && pullIndicator) {
+      messagesEl.addEventListener(
+        "touchstart",
+        (e) => {
+          if (messagesEl.scrollTop !== 0) return;
+          if (!e.touches || !e.touches.length) return;
+          pullStartY = e.touches[0].clientY;
+          isPulling = false;
+        },
+        { passive: true }
+      );
+
+      messagesEl.addEventListener(
+        "touchmove",
+        (e) => {
+          if (pullStartY === null) return;
+          if (!e.touches || !e.touches.length) return;
+
+          const currentY = e.touches[0].clientY;
+          const diffY = currentY - pullStartY;
+
+          if (diffY <= 0) {
+            resetPullIndicator();
+            return;
+          }
+
+          if (messagesEl.scrollTop !== 0) {
+            resetPullIndicator();
+            return;
+          }
+
+          isPulling = true;
+          pullIndicator.classList.add("show");
+
+          if (diffY >= PULL_THRESHOLD) {
+            pullIndicator.classList.add("ready");
+            pullIndicator.textContent = "↻ 놓으면 새로고침";
+          } else {
+            pullIndicator.classList.remove("ready");
+            pullIndicator.textContent = "↓ 당겨서 새로고침";
+          }
+        },
+        { passive: true }
+      );
+
+      messagesEl.addEventListener("touchend", () => {
+        if (!isPulling) {
+          pullStartY = null;
+          resetPullIndicator();
+          return;
+        }
+
+        const isReady = pullIndicator.classList.contains("ready");
+        pullStartY = null;
+        resetPullIndicator();
+
+        if (isReady) {
+          triggerHardRefresh();
+        }
+      });
+
+      messagesEl.addEventListener("touchcancel", () => {
+        pullStartY = null;
+        resetPullIndicator();
+      });
+    }
+
     function scrollToBottom() {
-      const messages = document.getElementById("messages");
-      messages.scrollTop = messages.scrollHeight;
+      if (!messagesEl) return;
+      messagesEl.scrollTop = messagesEl.scrollHeight;
     }
 
     // textarea 자동 높이 조절
