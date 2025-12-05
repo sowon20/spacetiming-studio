@@ -45,7 +45,8 @@
       margin: 0;
       padding: 0;
       height: 100%;
-      overflow: hidden; /* 페이지 자체는 스크롤 안 함 */
+      overflow-y: auto; /* 페이지 전체도 약간은 스크롤 가능하게 (키보드가 올라와도 상단 패널을 다시 볼 수 있도록) */
+      overflow-x: hidden;
       font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
       background: var(--bg-cream);
       color: var(--text-main);
