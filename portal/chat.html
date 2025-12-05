@@ -241,13 +241,13 @@
     /* 위로 끌어서 새로고침 표시 */
     .pull-indicator {
       position: sticky;
-      top: 0;
+      bottom: 0;
       text-align: center;
       font-size: 11px;
       padding: 4px 0;
       color: var(--text-soft);
       opacity: 0;
-      transform: translateY(-8px);
+      transform: translateY(8px);
       transition: opacity 0.15s ease, transform 0.15s ease, color 0.15s ease;
       pointer-events: none;
     }
@@ -639,10 +639,10 @@
 
     <!-- 메시지 영역 -->
     <main class="messages" id="messages">
-      <div class="pull-indicator" id="pullIndicator">↑ 올려서 새로고침</div>
       <div class="messages-inner" id="messagesInner">
         <!-- 실제 메시지는 JS에서 렌더링 -->
       </div>
+      <div class="pull-indicator" id="pullIndicator">↑ 올려서 새로고침</div>
     </main>
 
     <!-- 입력 영역 -->
