@@ -28,6 +28,8 @@ class AttachmentMeta(BaseModel):
     name: str
     type: Optional[str] = None
     size: Optional[int] = None
+    # 업로드된 파일에 접근할 수 있는 URL (예: /uploads/...)
+    url: Optional[str] = None
 
 
 class ChatRequest(BaseModel):
@@ -160,16 +162,19 @@ async def chat(req: ChatRequest):
     """
     chat.html / 사이드바 확장 / 아이폰에서 쓰는 공통 엔드포인트.
 
-    - 클라이언트 → /api/chat 로 messages 보냄
+    - 클라이언트 → /api/chat 로 messages + attachments 메타정보 보냄
     - 여기서 director_core(8897)로 그대로 포워딩
     - 부감독 뇌의 reply만 꺼내서 반환
     """
     # 첨부 파일 메타정보는 req.attachments 로 들어온다.
-    # 현재는 director_core(/chat) 호출 시 messages와 함께 attachments 메타만 포워딩하고,
-    # upload_profile 값은 나중에 업로드 엔드포인트(/api/upload) 구현 시 사용할 예정으로 여기서는 보존만 한다.
-    # director_core_v1 형식으로 변환
+    # director_core(/chat) 호출 시:
+    #   - messages: 대화 맥락
+    #   - attachments: 파일 메타 (name/type/size/url 등)
+    #   - upload_profile: 실제 파일이 저장된 프로필 이름 (예: local_default, gdrive_...)
+    # director_core 쪽에서 이 정보를 바탕으로 이미지/파일을 열어볼 수 있다.
     payload = {
         "messages": [m.model_dump() for m in req.messages],
+        "upload_profile": req.upload_profile or "local_default",
     }
     if req.attachments:
         payload["attachments"] = [a.model_dump() for a in req.attachments]

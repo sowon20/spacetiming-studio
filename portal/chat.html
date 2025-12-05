@@ -1255,6 +1255,33 @@
       }
     }
 
+    async function uploadPendingFiles() {
+      if (!pendingAttachments.length) return [];
+      const formData = new FormData();
+      pendingAttachments.forEach((att) => {
+        if (att.file) {
+          formData.append("files", att.file, att.file.name || "file");
+        }
+      });
+      formData.append("upload_profile", uploadProfile || "local_default");
+
+      try {
+        const resp = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        });
+        if (!resp.ok) {
+          throw new Error("upload failed: " + resp.status);
+        }
+        const data = await resp.json();
+        const files = Array.isArray(data?.files) ? data.files : [];
+        return files;
+      } catch (e) {
+        console.error("upload error", e);
+        return [];
+      }
+    }
+
     function showTypingIndicator() {
       if (document.getElementById(TYPING_ROW_ID)) return;
 
@@ -1513,6 +1540,12 @@
       if (isSending) return;
       isSending = true;
 
+      // 1) 첨부 파일이 있다면 먼저 서버로 업로드하여 URL을 확보
+      let uploadedInfos = [];
+      if (pendingAttachments.length) {
+        uploadedInfos = await uploadPendingFiles();
+      }
+
       // 첨부파일 이름을 내용에 함께 표기 (나중에 백엔드에서 활용 가능)
       const attachmentNames = pendingAttachments.map((att) => att.file?.name || "첨부파일");
       let contentToSend = text;
@@ -1522,21 +1555,33 @@
       }
 
       // 첨부 메타데이터 (로컬 기록 + 백엔드 전송용)
-      const attachmentMeta = pendingAttachments.map((att) => {
+      const attachmentMeta = pendingAttachments.map((att, idx) => {
         const f = att.file;
-        const type = (f && f.type) || null;
+        const uploaded = Array.isArray(uploadedInfos) ? uploadedInfos[idx] || {} : {};
+        const type = uploaded.type || (f && f.type) || null;
         const isImage = !!(type && type.startsWith("image/"));
         const isVideo = !!(type && type.startsWith("video/"));
         let kind = "file";
         if (isImage) kind = "image";
         else if (isVideo) kind = "video";
 
+        const size =
+          typeof uploaded.size === "number"
+            ? uploaded.size
+            : typeof f?.size === "number"
+            ? f.size
+            : null;
+
+        const name = uploaded.name || (f && f.name) || "첨부파일";
+        const url = uploaded.url || null;
+
         return {
           id: att.id,
-          name: (f && f.name) || "첨부파일",
+          name,
           type,
-          size: typeof f?.size === "number" ? f.size : null,
+          size,
           kind,
+          url,
         };
       });
 
