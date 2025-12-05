@@ -1,1 +1,0 @@
-pkill -f uvicorn; pkill -f python; pkill -f director_core; pkill -f telegram; pkill -f veo; pkill -f flow
