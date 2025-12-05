@@ -56,14 +56,13 @@
       background-repeat: no-repeat;
     }
 
-    .app {
-      height: 95vh; /* iOS 키보드 대응용, 거의 전체 화면 */
-      padding: env(safe-area-inset-top) 12px
-               calc(12px + env(safe-area-inset-bottom));
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
+.app {
+  height: 95vh; /* iOS 키보드 대응용, 거의 전체 화면 */
+  padding: 8px 12px calc(12px + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
 
     /* 상단 패널 */
 
