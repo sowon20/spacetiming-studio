@@ -1537,13 +1537,55 @@
 
       if (serverMsgs.length || localMsgs.length) {
         if (serverMsgs.length) {
-          // 서버에 이미 있는 메시지는 role + content + 형식화된 시간 기준으로 중복 제거
+          // 서버/로컬 모두 있을 때는, 같은 (role + content + 시간) 키를 가진 메시지는
+          // "정보가 더 많은 쪽"을 우선 사용한다. (첨부 URL 등)
           const keyOf = (m) => `${m.role}|${m.content}|${formatTime(m.timestamp)}`;
-          const existing = new Set(serverMsgs.map(keyOf));
-          const extras = Array.isArray(localMsgs)
-            ? localMsgs.filter((m) => !existing.has(keyOf(m)))
+
+          const localByKey = new Map();
+          if (Array.isArray(localMsgs)) {
+            for (const m of localMsgs) {
+              const k = keyOf(m);
+              const existing = localByKey.get(k);
+              // 같은 키가 여러 개면, 첨부가 더 많은 쪽을 보존
+              if (!existing) {
+                localByKey.set(k, m);
+              } else {
+                const a1 = Array.isArray(existing.attachments)
+                  ? existing.attachments.length
+                  : 0;
+                const a2 = Array.isArray(m.attachments) ? m.attachments.length : 0;
+                if (a2 > a1) {
+                  localByKey.set(k, m);
+                }
+              }
+            }
+          }
+
+          const mergedBase = [];
+          const serverKeys = new Set();
+
+          for (const s of serverMsgs) {
+            const k = keyOf(s);
+            serverKeys.add(k);
+            const localCandidate = localByKey.get(k);
+            if (localCandidate) {
+              // 로컬 쪽이 첨부 URL 등을 더 많이 갖고 있으면 그쪽을 사용
+              const serverAttLen = Array.isArray(s.attachments) ? s.attachments.length : 0;
+              const localAttLen = Array.isArray(localCandidate.attachments)
+                ? localCandidate.attachments.length
+                : 0;
+              mergedBase.push(localAttLen >= serverAttLen ? localCandidate : s);
+            } else {
+              mergedBase.push(s);
+            }
+          }
+
+          // 서버에는 없고 로컬에만 남아 있는 추가 메시지들도 붙여준다.
+          const extrasLocal = Array.isArray(localMsgs)
+            ? localMsgs.filter((m) => !serverKeys.has(keyOf(m)))
             : [];
-          merged = serverMsgs.concat(extras);
+
+          merged = mergedBase.concat(extrasLocal);
         } else {
           // 서버가 비어 있으면 localStorage 백업만 사용
           merged = Array.isArray(localMsgs) ? localMsgs : [];
@@ -1552,13 +1594,11 @@
 
       // 타임스탬프 기준으로 오래된 것 → 최신 순으로 정렬 (같은 시각이면 원래 순서 유지)
       if (merged.length) {
-        // 정렬 전 원래 순서를 기억해서, 같은 시각일 땐 기존 순서를 유지
         const withOrder = merged.map((m, idx) => ({ ...m, _order: idx }));
 
         withOrder.sort((a, b) => {
           const ta = a.timestamp ?? 0;
           const tb = b.timestamp ?? 0;
-          // 문자열(ISO)인 경우에도 Date 비교로 보정
           const da = typeof ta === "string" ? new Date(ta).getTime() : ta;
           const db = typeof tb === "string" ? new Date(tb).getTime() : tb;
 
@@ -1568,7 +1608,6 @@
           return da - db;
         });
 
-        // _order는 저장하지 않고 버림
         merged = withOrder.map(({ _order, ...rest }) => rest);
       }
 
