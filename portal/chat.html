@@ -65,7 +65,7 @@
 
     .app {
       height: 100dvh; /* iOS 홈 화면 앱에서 노치 포함 전체 화면 */
-      padding: calc(8px + env(safe-area-inset-top)) 12px calc(12px + env(safe-area-inset-bottom));
+      padding: env(safe-area-inset-top) 12px calc(12px + env(safe-area-inset-bottom));
       display: flex;
       flex-direction: column;
       gap: 8px;
@@ -982,6 +982,11 @@
       const wrap = bubble.closest(".bubble-wrap");
       if (!wrap) return;
 
+      // iOS에서 텍스트 돋보기/기본 롱프레스 메뉴가 뜨지 않도록 막기
+      if (event.touches && event.cancelable) {
+        event.preventDefault();
+      }
+
       longPressTargetWrap = wrap;
       const point = event.touches ? event.touches[0] : event;
       longPressStartX = point.clientX;
@@ -1207,7 +1212,7 @@
       return row;
     }
     // 롱프레스(모바일/데스크탑)로 말풍선 메뉴 열기
-    messagesInner.addEventListener("touchstart", handlePressStart, { passive: true });
+    messagesInner.addEventListener("touchstart", handlePressStart, { passive: false });
     messagesInner.addEventListener("touchmove", handlePressMove, { passive: true });
     messagesInner.addEventListener("touchend", handlePressEnd);
     messagesInner.addEventListener("touchcancel", handlePressEnd);
