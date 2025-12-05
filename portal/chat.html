@@ -463,7 +463,7 @@
       right: -6px;
       top: 22px;
       display: none;
-      background: rgba(45, 50, 46, 0.9);
+      background: rgba(45, 50, 46, 0.9); /* 기본: 상대 메시지용 */
       border-radius: 999px;
       padding: 3px 6px;
       font-size: 11px;
@@ -475,6 +475,7 @@
     .msg-row.me .bubble-menu {
       left: -2px;
       right: auto;
+      background: rgb(21, 21, 21); /* 내 메시지용: 더 진한 배경 */
     }
 
     .bubble-menu.show {
@@ -1233,12 +1234,14 @@
 
       const menu = document.createElement("div");
       menu.className = "bubble-menu";
-      ["pin", "edit", "delete", "history"].forEach((action) => {
+      ["pin", "copy", "edit", "delete", "history"].forEach((action) => {
         const btn = document.createElement("button");
         btn.dataset.action = action;
         btn.textContent =
           action === "pin"
             ? "핀"
+            : action === "copy"
+            ? "복사"
             : action === "edit"
             ? "수정"
             : action === "delete"
@@ -1584,6 +1587,39 @@
           const text = bubbleEl.textContent || "";
           pinText.textContent = text;
           pinCapsule.style.display = "flex";
+        } else if (action === "copy") {
+          const text = bubbleEl.textContent || "";
+          if (text) {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+              navigator.clipboard.writeText(text).catch(() => {
+                try {
+                  const temp = document.createElement("textarea");
+                  temp.value = text;
+                  temp.style.position = "fixed";
+                  temp.style.left = "-9999px";
+                  document.body.appendChild(temp);
+                  temp.select();
+                  document.execCommand("copy");
+                  document.body.removeChild(temp);
+                } catch (_) {
+                  // ignore
+                }
+              });
+            } else {
+              try {
+                const temp = document.createElement("textarea");
+                temp.value = text;
+                temp.style.position = "fixed";
+                temp.style.left = "-9999px";
+                document.body.appendChild(temp);
+                temp.select();
+                document.execCommand("copy");
+                document.body.removeChild(temp);
+              } catch (_) {
+                // ignore
+              }
+            }
+          }
         } else if (action === "delete") {
           const row = wrap.closest(".msg-row");
           if (row) row.remove();
