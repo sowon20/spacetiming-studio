@@ -104,8 +104,23 @@
       backdrop-filter: blur(16px) saturate(140%);
       -webkit-backdrop-filter: blur(16px) saturate(140%);
       box-shadow: 0 18px 40px rgba(5, 7, 6, 0.55);
-      transition: max-height 0.25s ease, opacity 0.25s ease, background-color 0.2s ease;
+      transition: max-height 0.25s ease, opacity 0.25s ease, background-color 0.2s ease, padding 0.2s ease, gap 0.2s ease;
       margin-top: -6px; /* 그라데이션 속으로 살짝 파묻혀 보이게 */
+      cursor: pointer;
+    }
+
+    /* 상단 패널이 요약(접힘) 상태일 때 */
+    .top-panel.collapsed {
+      padding: 6px 10px;
+      gap: 2px;
+    }
+
+    .top-panel.collapsed .top-title-sub {
+      display: none;
+    }
+
+    .top-panel.collapsed .top-actions .icon-btn {
+      display: none;
     }
 
 
