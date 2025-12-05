@@ -639,7 +639,7 @@
 
     <!-- 메시지 영역 -->
     <main class="messages" id="messages">
-      <div class="pull-indicator" id="pullIndicator">↓ 당겨서 새로고침</div>
+      <div class="pull-indicator" id="pullIndicator">↑ 올려서 새로고침</div>
       <div class="messages-inner" id="messagesInner">
         <!-- 실제 메시지는 JS에서 렌더링 -->
       </div>
@@ -918,15 +918,25 @@
       scrollToBottom();
     }
 
-    // --- 위로 끌어서 새로고침 (비상용) ---
+    // --- 위로 올려서 새로고침 (대화 맨 아래 기준, 비상용) ---
     const PULL_THRESHOLD = 60; // px
     let pullStartY = null;
+    let pullDelta = 0;
     let isPulling = false;
+
+    function isAtBottom() {
+      if (!messagesEl) return false;
+      const tolerance = 2;
+      return (
+        messagesEl.scrollTop + messagesEl.clientHeight >=
+        messagesEl.scrollHeight - tolerance
+      );
+    }
 
     function resetPullIndicator() {
       if (!pullIndicator) return;
       pullIndicator.classList.remove("show", "ready");
-      pullIndicator.textContent = "↓ 당겨서 새로고침";
+      pullIndicator.textContent = "↑ 올려서 새로고침";
     }
 
     function triggerHardRefresh() {
@@ -938,10 +948,15 @@
       messagesEl.addEventListener(
         "touchstart",
         (e) => {
-          if (messagesEl.scrollTop !== 0) return;
+          if (!isAtBottom()) {
+            pullStartY = null;
+            isPulling = false;
+            return;
+          }
           if (!e.touches || !e.touches.length) return;
           pullStartY = e.touches[0].clientY;
-          isPulling = false;
+          pullDelta = 0;
+          isPulling = true;
         },
         { passive: true }
       );
@@ -949,56 +964,54 @@
       messagesEl.addEventListener(
         "touchmove",
         (e) => {
-          if (pullStartY === null) return;
+          if (!isPulling || pullStartY === null) return;
           if (!e.touches || !e.touches.length) return;
 
           const currentY = e.touches[0].clientY;
-          const diffY = currentY - pullStartY;
+          // 아래에서 위로 올릴 때: 손가락이 위로 가니까 값이 작아짐
+          pullDelta = pullStartY - currentY;
 
-          if (diffY <= 0) {
+          if (pullDelta <= 0 || !isAtBottom()) {
             resetPullIndicator();
             return;
           }
 
-          if (messagesEl.scrollTop !== 0) {
-            resetPullIndicator();
-            return;
-          }
-
-          isPulling = true;
           pullIndicator.classList.add("show");
 
-          if (diffY >= PULL_THRESHOLD) {
+          if (pullDelta >= PULL_THRESHOLD) {
             pullIndicator.classList.add("ready");
             pullIndicator.textContent = "↻ 놓으면 새로고침";
           } else {
             pullIndicator.classList.remove("ready");
-            pullIndicator.textContent = "↓ 당겨서 새로고침";
+            pullIndicator.textContent = "↑ 올려서 새로고침";
           }
         },
         { passive: true }
       );
 
-      messagesEl.addEventListener("touchend", () => {
+      const endPull = () => {
         if (!isPulling) {
           pullStartY = null;
+          pullDelta = 0;
           resetPullIndicator();
           return;
         }
 
-        const isReady = pullIndicator.classList.contains("ready");
+        const isReady =
+          pullDelta >= PULL_THRESHOLD && pullIndicator.classList.contains("ready");
+
         pullStartY = null;
+        pullDelta = 0;
+        isPulling = false;
         resetPullIndicator();
 
         if (isReady) {
           triggerHardRefresh();
         }
-      });
+      };
 
-      messagesEl.addEventListener("touchcancel", () => {
-        pullStartY = null;
-        resetPullIndicator();
-      });
+      messagesEl.addEventListener("touchend", endPull);
+      messagesEl.addEventListener("touchcancel", endPull);
     }
 
     function scrollToBottom() {
