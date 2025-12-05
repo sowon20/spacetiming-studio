@@ -65,7 +65,7 @@
 
     .app {
       height: 100dvh; /* iOS 홈 화면 앱에서 노치 포함 전체 화면 */
-      padding: env(safe-area-inset-top) 12px calc(12px + env(safe-area-inset-bottom));
+      padding: calc(env(safe-area-inset-top) - 4px) 12px calc(12px + env(safe-area-inset-bottom));
       display: flex;
       flex-direction: column;
       gap: 8px;
@@ -310,6 +310,7 @@
       line-height: 1.4;
       word-break: break-word;
       white-space: pre-wrap; /* Shift+Enter 줄바꿈 그대로 보여주기 */
+      transition: transform 0.08s ease-out, background-color 0.08s ease-out;
     }
 
     .bubble.other {
@@ -322,6 +323,18 @@
       background: var(--sage-mid);
       color: #f3eee5;
       border-bottom-right-radius: 6px;
+    }
+
+    .bubble.press-feedback {
+      transform: scale(0.985);
+    }
+
+    .msg-row.other .bubble.press-feedback {
+      background-color: rgba(239, 233, 224, 0.96);
+    }
+
+    .msg-row.me .bubble.press-feedback {
+      background-color: #4a534b;
     }
 
     .bubble.typing {
@@ -950,6 +963,7 @@
     const LONG_PRESS_MOVE_TOLERANCE = 10;
     let longPressTimer = null;
     let longPressTargetWrap = null;
+    let longPressTargetBubble = null;
     let longPressStartX = 0;
     let longPressStartY = 0;
 
@@ -973,7 +987,11 @@
         clearTimeout(longPressTimer);
         longPressTimer = null;
       }
+      if (longPressTargetBubble) {
+        longPressTargetBubble.classList.remove("press-feedback");
+      }
       longPressTargetWrap = null;
+      longPressTargetBubble = null;
     }
 
     function handlePressStart(event) {
@@ -981,6 +999,9 @@
       if (!bubble) return;
       const wrap = bubble.closest(".bubble-wrap");
       if (!wrap) return;
+
+      longPressTargetBubble = bubble;
+      bubble.classList.add("press-feedback");
 
       // iOS에서 텍스트 돋보기/기본 롱프레스 메뉴가 뜨지 않도록 막기
       if (event.touches && event.cancelable) {
