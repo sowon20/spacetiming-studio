@@ -935,6 +935,24 @@
       });
     }
 
+    // 상단 패널 요약/펼침 토글 (요약 모드: 부감독 상태 + API 사용량 위주)
+    const topPanel = document.querySelector('.top-panel');
+    if (topPanel) {
+      let isTopPanelCollapsed = false;
+      topPanel.addEventListener("click", (e) => {
+        // 아이콘 버튼(배경/전화)을 누를 때는 접힘 토글을 막는다
+        if (e.target.closest(".icon-btn")) {
+          return;
+        }
+        isTopPanelCollapsed = !isTopPanelCollapsed;
+        if (isTopPanelCollapsed) {
+          topPanel.classList.add("collapsed");
+        } else {
+          topPanel.classList.remove("collapsed");
+        }
+      });
+    }
+
     async function fetchServerHistory(limit = 200) {
       try {
         const resp = await fetch(`/api/history?limit=${limit}`);
