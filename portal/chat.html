@@ -873,7 +873,8 @@
     }
 
     updateViewportHeight();
-    window.addEventListener("resize", updateViewportHeight);
+    // iOS 키보드 등장/퇴장 시 발생하는 resize 이벤트에는 반응하지 않고,
+    // 가로/세로 전환처럼 진짜 레이아웃 변화에만 대응한다.
     window.addEventListener("orientationchange", updateViewportHeight);
 
     // 업로드 프로필 초기화 (localStorage에서 불러오기)
