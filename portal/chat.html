@@ -1040,34 +1040,64 @@
     }
 
     function formatTime(ts) {
-      // 서버에서 오는 HH:MM 문자열인 경우
+      // "HH:MM" 형식으로만 온 경우는 그대로 사용
+      if (typeof ts === "string" && ts.length >= 5 && ts[2] === ":") {
+        return ts.slice(0, 5);
+      }
+
+      let d = null;
+
       if (typeof ts === "string") {
-        if (ts.length >= 5 && ts[2] === ":") {
-          return ts.slice(0, 5);
+        const parsed = new Date(ts);
+        if (!isNaN(parsed.getTime())) {
+          d = parsed;
         }
-        const dFromStr = new Date(ts);
-        if (!isNaN(dFromStr.getTime())) {
-          const hh = String(dFromStr.getHours()).padStart(2, "0");
-          const mm = String(dFromStr.getMinutes()).padStart(2, "0");
-          return `${hh}:${mm}`;
-        }
-      }
-
-      // 숫자 타임스탬프(Date.now())인 경우
-      if (typeof ts === "number") {
-        const d = new Date(ts);
-        if (!isNaN(d.getTime())) {
-          const hh = String(d.getHours()).padStart(2, "0");
-          const mm = String(d.getMinutes()).padStart(2, "0");
-          return `${hh}:${mm}`;
+      } else if (typeof ts === "number") {
+        const parsed = new Date(ts);
+        if (!isNaN(parsed.getTime())) {
+          d = parsed;
         }
       }
 
-      // 그 외(없거나 이상한 값)는 현재 시각으로 대체
+      if (!d) {
+        d = new Date();
+      }
+
       const now = new Date();
-      const hh = String(now.getHours()).padStart(2, "0");
-      const mm = String(now.getMinutes()).padStart(2, "0");
-      return `${hh}:${mm}`;
+
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
+      const hh = String(d.getHours()).padStart(2, "0");
+      const mi = String(d.getMinutes()).padStart(2, "0");
+
+      const todayY = now.getFullYear();
+      const todayM = now.getMonth();
+      const todayD = now.getDate();
+
+      const isToday =
+        yyyy === todayY &&
+        d.getMonth() === todayM &&
+        d.getDate() === todayD;
+
+      const yesterday = new Date(todayY, todayM, todayD - 1);
+      const isYesterday =
+        yyyy === yesterday.getFullYear() &&
+        d.getMonth() === yesterday.getMonth() &&
+        d.getDate() === yesterday.getDate();
+
+      if (isToday) {
+        // 오늘: 시간만
+        return `${hh}:${mi}`;
+      }
+
+      if (isYesterday) {
+        // 어제: "어제 HH:MM"
+        return `어제 ${hh}:${mi}`;
+      }
+
+      // 그 외: "MM/DD HH:MM"
+      return `${mm}/${dd} ${hh}:${mi}`;
     }
 
     function createMessage(role, content, timestamp, attachments) {
