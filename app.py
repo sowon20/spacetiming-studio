@@ -168,17 +168,17 @@ def _load_history(limit: int = 400) -> List[HistoryItem]:
     if not portal_items_sorted and not burned_items:
         return []
 
-    # 불탄방 기록은 가능한 한 모두 보여주고, 나머지 limit 범위 안에서 포털 히스토리를 뒤에서 자른다.
-    burned_items_sorted = burned_items  # 파일 순서를 그대로 유지
-    remaining = max(0, limit - len(burned_items_sorted))
+    # 불탄방 + 포털 히스토리를 한 타임라인으로 합친 후, 뒤에서 limit 개만 남긴다.
+    merged: list[HistoryItem] = []
+    if burned_items:
+        # 불탄방은 파일 순서를 그대로 유지 (옛 기록이 앞쪽)
+        merged.extend(burned_items)
+    if portal_items_sorted:
+        # 포털 히스토리는 정렬된 상태에서 이어 붙여, 최신 기록이 타임라인 끝쪽에 오도록 한다.
+        merged.extend(portal_items_sorted)
 
-    if portal_items_sorted and remaining > 0:
-        portal_tail = portal_items_sorted[-remaining:]
-    else:
-        portal_tail = []
-
-    combined = burned_items_sorted[-limit:] if remaining == 0 else burned_items_sorted + portal_tail
-    return combined
+    # 전체 타임라인에서 가장 최근 limit개만 반환 (아래로 갈수록 최신)
+    return merged[-limit:]
 
 
 # 서버 공용 히스토리 파일(포털 기준)에 한 줄 추가.
