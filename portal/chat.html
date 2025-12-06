@@ -893,6 +893,12 @@
     const pinCapsule = document.getElementById("pinCapsule");
     const pinText = document.getElementById("pinText");
     const pinClearBtn = document.getElementById("pinClearBtn");
+    if (pinClearBtn && pinCapsule) {
+  pinClearBtn.addEventListener("click", () => {
+    pinCapsule.style.display = "none";
+    if (pinText) pinText.textContent = "";
+  });
+}
     const inputEl = document.getElementById("input");
     const sendBtn = document.getElementById("sendBtn");
     const attachBtn = document.getElementById("attachBtn");
@@ -1303,7 +1309,75 @@
       lastTapBubble = bubble;
       lastTapTime = now;
     }
+    function handleBubbleMenuClick(button) {
+  const action = button.dataset.action;
+  if (!action) return;
 
+  const wrap = button.closest(".bubble-wrap");
+  if (!wrap) return;
+
+  const id = wrap.dataset.id;
+  const row = wrap.closest(".msg-row");
+  const idx = chatHistory.findIndex((m) => m.id === id);
+  if (idx === -1) return;
+
+  const msg = chatHistory[idx];
+  const menu = wrap.querySelector(".bubble-menu");
+
+  if (action === "copy") {
+    const text = msg.content || "";
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).catch(() => {});
+    }
+  } else if (action === "edit") {
+    const current = msg.content || "";
+    const next = window.prompt("메시지 수정", current);
+    if (next !== null && next !== current) {
+      msg.content = next;
+      const bubble = wrap.querySelector(".bubble");
+      if (bubble) {
+        bubble.innerHTML = renderContent(next);
+      }
+      saveHistory();
+    }
+  } else if (action === "delete") {
+    chatHistory.splice(idx, 1);
+    if (row) row.remove();
+    saveHistory();
+  } else if (action === "pin") {
+    if (pinText && pinCapsule) {
+      pinText.textContent = msg.content || "";
+      pinCapsule.style.display = "flex";
+    }
+  }
+
+  if (menu) {
+    menu.classList.remove("show");
+  }
+}
+if (messagesInner) {
+  // 롱프레스
+  messagesInner.addEventListener("touchstart", handlePressStart, { passive: false });
+  messagesInner.addEventListener("touchmove", handlePressMove, { passive: false });
+  messagesInner.addEventListener("touchend", handlePressEnd);
+
+  messagesInner.addEventListener("mousedown", handlePressStart);
+  messagesInner.addEventListener("mousemove", handlePressMove);
+  messagesInner.addEventListener("mouseup", handlePressEnd);
+
+  // 탭/메뉴 클릭
+  messagesInner.addEventListener("click", (event) => {
+    const bubble = event.target.closest(".bubble");
+    if (bubble) {
+      handleBubbleTap(bubble);
+    }
+
+    const menuButton = event.target.closest(".bubble-menu button");
+    if (menuButton) {
+      handleBubbleMenuClick(menuButton);
+    }
+  });
+}
     function clearPendingAttachments() {
       pendingAttachments.forEach((att) => {
         if (att.url) {
@@ -1545,27 +1619,35 @@
         bubble.appendChild(attWrap);
       }
 
-      const meta = document.createElement("div");
+       const meta = document.createElement("div");
       meta.className = "bubble-meta" + (msg.role === "assistant" ? "" : " me");
       meta.textContent = formatTime(msg.timestamp);
 
+      // 말풍선 메뉴 생성
       const menu = document.createElement("div");
       menu.className = "bubble-menu";
-      ["pin", "copy", "edit", "delete", "history"].forEach((action) => {
+
+      function addMenuButton(action, label) {
         const btn = document.createElement("button");
+        btn.type = "button";
         btn.dataset.action = action;
-        btn.textContent =
-          action === "pin"
-            ? "핀"
-            : action === "copy"
-            ? "복사"
-            : action === "edit"
-            ? "수정"
-            : action === "delete"
-            ? "삭제"
-            : "기록";
+        btn.textContent = label;
         menu.appendChild(btn);
-      });
+      }
+
+      // 항상 복사 버튼
+      addMenuButton("copy", "복사");
+
+      // 내 메시지일 때만 수정/삭제
+      if (msg.role !== "assistant") {
+        addMenuButton("edit", "수정");
+        addMenuButton("delete", "삭제");
+      }
+
+      // 항상 기록 버튼
+      addMenuButton("pin", "기록");
+
+      // 필요하면 나중에 'history' 같은 추가 액션도 여기서 addMenuButton으로 더 붙이면 됨
 
       wrap.appendChild(toggle);
       wrap.appendChild(bubble);
@@ -1693,15 +1775,19 @@
     }
 
     async function renderHistory() {
-      // 서버 히스토리를 기준으로, 없을 때만 로컬 캐시 사용
-      const serverMsgs = await fetchServerHistory(1000);
+      // 로컬 히스토리를 기준으로, 없을 때만 서버 히스토리로 초기화
+      const localMsgs = loadHistory();
       let base = [];
 
-      if (Array.isArray(serverMsgs) && serverMsgs.length > 0) {
-        base = serverMsgs;
+      if (Array.isArray(localMsgs) && localMsgs.length > 0) {
+        base = localMsgs;
       } else {
-        const localMsgs = loadHistory();
-        base = Array.isArray(localMsgs) ? localMsgs : [];
+        const serverMsgs = await fetchServerHistory(1000);
+        if (Array.isArray(serverMsgs) && serverMsgs.length > 0) {
+          base = serverMsgs;
+        } else {
+          base = [];
+        }
       }
 
       // 타임스탬프 기준으로 오래된 것 → 최신 순으로 정렬 (같은 시각이면 원래 순서 유지)
@@ -1733,7 +1819,7 @@
         appendMessageToDOM(chatHistory[i]);
       }
 
-      // 서버 기준 상태를 localStorage에도 백업처럼 저장
+      // 현재 기준 상태를 localStorage에도 저장
       saveHistory();
       scrollToBottom();
     }
