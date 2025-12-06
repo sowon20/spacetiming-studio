@@ -15,7 +15,7 @@ from PIL import Image as PILImage
 UPLOAD_ROOT = Path(os.getenv("UPLOAD_ROOT", "/mnt/sowon_cloud/chat_uploads")).resolve()
 UPLOAD_ROOT.mkdir(parents=True, exist_ok=True)
 
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")  # 실제 모델 이름에 맞게 수정 가능
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")  # 실제 모델 이름에 맞게 수정 가능
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 if not GEMINI_API_KEY:
@@ -26,7 +26,7 @@ _model = genai.GenerativeModel(GEMINI_MODEL)
 
 
 def call_model(system_prompt: str) -> str:
-    """Gemini Flash 2.5 한 번 호출해서 텍스트만 꺼내오는 자리."""
+    """Gemini Flash 2.0 한 번 호출해서 텍스트만 꺼내오는 자리."""
     resp = _model.generate_content(system_prompt)
     # resp.text 있으면 그거, 아니면 파트들 합쳐서 반환
     if getattr(resp, "text", None):
