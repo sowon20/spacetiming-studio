@@ -559,7 +559,60 @@
       overflow: hidden;
       text-overflow: ellipsis;
     }
+    .bubble-attachment.image .bubble-attachment-name {
+      display: none;
+    }
+    .link-previews {
+      margin-top: 4px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
 
+    .link-preview {
+      border-radius: 12px;
+      overflow: hidden;
+      background: rgba(0, 0, 0, 0.4);
+      max-width: 220px;
+    }
+
+    .msg-row.other .link-preview {
+      background: rgba(255, 255, 255, 0.9);
+    }
+
+    .link-preview-image {
+      display: block;
+      width: 100%;
+      max-height: 200px;
+      object-fit: cover;
+    }
+
+    .link-preview-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 4px 6px;
+      font-size: 11px;
+      color: #f5f2ec;
+    }
+
+    .msg-row.other .link-preview-footer {
+      color: var(--text-main);
+    }
+
+    .link-preview-open {
+      border: none;
+      background: none;
+      color: inherit;
+      font-size: 11px;
+      text-decoration: underline;
+      cursor: pointer;
+      padding: 0;
+    }
+
+    .link-preview-open:active {
+      transform: scale(0.95);
+    }
     .msg-row.other .bubble-menu-toggle {
       right: -14px;
       left: auto;
@@ -1163,7 +1216,16 @@
 
       return text;
     }
-
+    function extractImageUrls(raw) {
+      if (!raw) return [];
+      const urls = [];
+      const regex = /(https?:\/\/[^\s]+?\.(?:png|jpe?g|webp|gif|heic))/gi;
+      let match;
+      while ((match = regex.exec(raw)) !== null) {
+        urls.push(match[1]);
+      }
+      return urls;
+    }
     function truncateFileName(name, maxLen = 24) {
       const str = String(name || "첨부파일");
       if (str.length <= maxLen) return str;
@@ -1554,6 +1616,45 @@ if (messagesInner) {
       bubble.className = "bubble " + (isAssistant ? "other" : "me");
       bubble.innerHTML = renderContent(msg.content || "");
 
+      // 텍스트 안에 포함된 순수 이미지 URL 미리보기 카드 생성
+      const imageLinkUrls = extractImageUrls(msg.content || "");
+      let linkPreviewContainer = null;
+      if (imageLinkUrls.length > 0) {
+        linkPreviewContainer = document.createElement("div");
+        linkPreviewContainer.className = "link-previews";
+
+        imageLinkUrls.forEach((url) => {
+          const card = document.createElement("div");
+          card.className = "link-preview image-link-preview";
+
+          const thumb = document.createElement("img");
+          thumb.className = "link-preview-image";
+          thumb.src = url;
+          thumb.alt = url;
+
+          const footer = document.createElement("div");
+          footer.className = "link-preview-footer";
+
+          const label = document.createElement("span");
+          label.textContent = "이미지 링크";
+
+          const openBtn = document.createElement("button");
+          openBtn.type = "button";
+          openBtn.className = "link-preview-open";
+          openBtn.textContent = "Safari로 열기";
+          openBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            window.open(url, "_blank");
+          });
+
+          footer.appendChild(label);
+          footer.appendChild(openBtn);
+          card.appendChild(thumb);
+          card.appendChild(footer);
+          linkPreviewContainer.appendChild(card);
+        });
+      }
+
       // 첨부 처리
       const attachments = Array.isArray(msg.attachments) ? msg.attachments : [];
       if (attachments.length > 0) {
@@ -1655,6 +1756,9 @@ if (messagesInner) {
 
       // 조립
       wrap.appendChild(bubble);
+      if (linkPreviewContainer) {
+        wrap.appendChild(linkPreviewContainer);
+      }
       if (attachments.length > 0) {
         wrap.appendChild(attachmentsBox);
       }
