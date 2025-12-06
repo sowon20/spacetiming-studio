@@ -77,6 +77,10 @@ HISTORY_FILES = [
 HISTORY_WRITE_FILE = Path("portal_history") / "sowon.chat.jsonl"
 HISTORY_WRITE_FILE.parent.mkdir(parents=True, exist_ok=True)
 
+BURNED_HISTORY_FILES = [
+    "assistant/memory/burned_room.v1.micro.jsonl",
+]
+
 
 def _load_history(limit: int = 400) -> List[HistoryItem]:
     items_by_key: dict[str, HistoryItem] = {}
@@ -115,12 +119,66 @@ def _load_history(limit: int = 400) -> List[HistoryItem]:
         except FileNotFoundError:
             continue
 
-    if not items_by_key:
+    # 포털 히스토리 정리
+    portal_items_sorted: list[HistoryItem] = []
+    if items_by_key:
+      # id 기준으로 오래된 것 → 최신 순 정렬
+      portal_items_sorted = sorted(items_by_key.values(), key=lambda x: x.id)
+
+    # 불탄방(옛 대화 요약) 히스토리 로드
+    burned_items: list[HistoryItem] = []
+    for path in BURNED_HISTORY_FILES:
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                idx = 0
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        data = json.loads(line)
+                    except json.JSONDecodeError:
+                        continue
+
+                    text = data.get("text") or data.get("content") or ""
+                    if not text:
+                        continue
+
+                    role = data.get("role") or "assistant"
+                    ts = data.get("timestamp") or ""
+                    msg_id = data.get("id") or f"burned_{idx:04d}"
+
+                    burned_items.append(
+                        HistoryItem(
+                            id=msg_id,
+                            role=role,
+                            content=text,
+                            timestamp=ts,
+                            attachments=None,
+                        )
+                    )
+                    idx += 1
+        except FileNotFoundError:
+            continue
+        except Exception:
+            # 불탄방 히스토리 로딩 실패는 전체 히스토리를 막지 않는다.
+            continue
+
+    # 포털/불탄방 둘 다 완전히 비어 있으면 빈 리스트 반환
+    if not portal_items_sorted and not burned_items:
         return []
 
-    # 최신 순으로 정렬 후 limit만큼 자르기
-    items_sorted = sorted(items_by_key.values(), key=lambda x: x.id)[-limit:]
-    return items_sorted
+    # 불탄방 기록은 가능한 한 모두 보여주고, 나머지 limit 범위 안에서 포털 히스토리를 뒤에서 자른다.
+    burned_items_sorted = burned_items  # 파일 순서를 그대로 유지
+    remaining = max(0, limit - len(burned_items_sorted))
+
+    if portal_items_sorted and remaining > 0:
+        portal_tail = portal_items_sorted[-remaining:]
+    else:
+        portal_tail = []
+
+    combined = burned_items_sorted[-limit:] if remaining == 0 else burned_items_sorted + portal_tail
+    return combined
 
 
 # 서버 공용 히스토리 파일(포털 기준)에 한 줄 추가.
