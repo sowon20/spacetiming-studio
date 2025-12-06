@@ -449,6 +449,22 @@
       padding-right: 2px;
     }
 
+    .retry-btn {
+      margin-top: 4px;
+      align-self: flex-end;
+      border: none;
+      border-radius: 999px;
+      padding: 3px 8px;
+      font-size: 11px;
+      background: rgba(200, 80, 80, 0.16);
+      color: #f5e2e2;
+      cursor: pointer;
+    }
+
+    .retry-btn:active {
+      transform: scale(0.95);
+    }
+
     /* 말풍선 메뉴 */
 
     .bubble-menu-toggle {
@@ -902,6 +918,7 @@
     let uploadProfile = "local_default";
     let chatHistory = [];
     let pendingAttachments = [];
+    let isComposing = false;
     const INITIAL_HISTORY_BATCH = 40;
     const HISTORY_PAGE_SIZE = 40;
     let visibleStartIndex = 0;
@@ -1094,6 +1111,7 @@
         content,
         timestamp: timestamp ?? Date.now(),
         attachments: Array.isArray(attachments) ? attachments : [],
+        status: "ok",
       };
     }
 
@@ -1489,6 +1507,98 @@
       row.appendChild(wrap);
       return row;
     }
+
+    function markMessageAsFailed(msgId) {
+      if (!msgId) return;
+
+      // chatHistory 내 상태 플래그 업데이트
+      const target = chatHistory.find((m) => m.id === msgId);
+      if (target) {
+        target.status = "error";
+      }
+
+      const wrap = messagesInner.querySelector(
+        '.bubble-wrap[data-id="' + msgId + '"]'
+      );
+      if (!wrap) return;
+
+      // 이미 재전송 버튼이 있다면 중복으로 만들지 않기
+      if (wrap.querySelector(".retry-btn")) return;
+
+      const meta = wrap.querySelector(".bubble-meta");
+      if (meta) {
+        meta.textContent = (meta.textContent || "") + " · 전송 실패";
+      }
+
+      const retryBtn = document.createElement("button");
+      retryBtn.type = "button";
+      retryBtn.className = "retry-btn";
+      retryBtn.textContent = "다시 보내기";
+
+      retryBtn.addEventListener("click", () => {
+        retrySend(msgId);
+      });
+
+      wrap.appendChild(retryBtn);
+    }
+
+    async function retrySend(msgId) {
+      const msg = chatHistory.find((m) => m.id === msgId);
+      if (!msg || isSending) return;
+
+      isSending = true;
+      showTypingIndicator();
+
+      try {
+        const resp = await fetch("/api/chat", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            messages: [{ role: "user", content: msg.content }],
+            attachments: Array.isArray(msg.attachments) ? msg.attachments : [],
+            upload_profile: uploadProfile,
+          }),
+        });
+
+        if (!resp.ok) {
+          throw new Error("HTTP " + resp.status);
+        }
+
+        const data = await resp.json();
+        const replyText =
+          data && typeof data.reply === "string" ? data.reply.trim() : "";
+
+        hideTypingIndicator();
+
+        if (replyText) {
+          const assistantMsg = createMessage("assistant", replyText);
+          chatHistory.push(assistantMsg);
+          appendMessageToDOM(assistantMsg);
+          saveHistory();
+          scrollToBottom();
+        }
+
+        // 성공 시 실패 표시 제거
+        const wrap = messagesInner.querySelector(
+          '.bubble-wrap[data-id="' + msgId + '"]'
+        );
+        if (wrap) {
+          const retryBtn = wrap.querySelector(".retry-btn");
+          if (retryBtn) retryBtn.remove();
+          const meta = wrap.querySelector(".bubble-meta");
+          if (meta) {
+            meta.textContent = meta.textContent.replace(" · 전송 실패", "");
+          }
+        }
+      } catch (err) {
+        console.error("retrySend error", err);
+        hideTypingIndicator();
+      } finally {
+        isSending = false;
+      }
+    }
     // 롱프레스(모바일/데스크탑)로 말풍선 메뉴 열기
     messagesInner.addEventListener("touchstart", handlePressStart, { passive: false });
     messagesInner.addEventListener("touchmove", handlePressMove, { passive: true });
@@ -1615,6 +1725,72 @@
   });
 }
 
+    // 아래쪽에서 위로 길게 끌어올리면 전체 새로고침
+    if (messagesEl) {
+      let pullFromBottomStartY = 0;
+      let pullFromBottomActive = false;
+      let pullFromBottomDistance = 0;
+      const BOTTOM_THRESHOLD_PX = 90;
+      const BOTTOM_EDGE_TOLERANCE = 20;
+
+      messagesEl.addEventListener(
+        "touchstart",
+        (e) => {
+          if (!e.touches || !e.touches.length) return;
+          const t = e.touches[0];
+
+          // 거의 맨 아래에 있을 때만 "아래에서 위로" 제스처 인식 시작
+          const scrollBottom =
+            messagesEl.scrollHeight - messagesEl.clientHeight - messagesEl.scrollTop;
+          if (scrollBottom <= BOTTOM_EDGE_TOLERANCE) {
+            pullFromBottomActive = true;
+            pullFromBottomStartY = t.clientY;
+            pullFromBottomDistance = 0;
+          } else {
+            pullFromBottomActive = false;
+          }
+        },
+        { passive: true }
+      );
+
+      messagesEl.addEventListener(
+        "touchmove",
+        (e) => {
+          if (!pullFromBottomActive || !e.touches || !e.touches.length) return;
+          const t = e.touches[0];
+          pullFromBottomDistance = pullFromBottomStartY - t.clientY; // 위로 끌수록 양수
+
+          if (pullFromBottomDistance > 10 && pullIndicator) {
+            pullIndicator.classList.add("show");
+            if (pullFromBottomDistance > BOTTOM_THRESHOLD_PX) {
+              pullIndicator.classList.add("ready");
+              pullIndicator.textContent = "놓으면 새로고침";
+            } else {
+              pullIndicator.classList.remove("ready");
+              pullIndicator.textContent = "위로 끌어올리면 새로고침";
+            }
+          }
+        },
+        { passive: true }
+      );
+
+      messagesEl.addEventListener("touchend", () => {
+        if (pullFromBottomActive && pullFromBottomDistance > BOTTOM_THRESHOLD_PX) {
+          if (pullIndicator) {
+            pullIndicator.classList.remove("ready");
+            pullIndicator.textContent = "새로고침 중…";
+          }
+          location.reload();
+        } else if (pullIndicator) {
+          pullIndicator.classList.remove("show");
+          pullIndicator.classList.remove("ready");
+          pullIndicator.textContent = "↑ 위로 올리면 이전 대화 보기";
+        }
+        pullFromBottomActive = false;
+        pullFromBottomDistance = 0;
+      });
+    }
+
     function scrollToBottom() {
       if (!messagesEl) return;
       messagesEl.scrollTop = messagesEl.scrollHeight;
@@ -1629,6 +1805,17 @@
     }
 
     inputEl.addEventListener("input", autoResizeInput);
+
+    inputEl.addEventListener("compositionstart", () => {
+      isComposing = true;
+    });
+
+    inputEl.addEventListener("compositionend", () => {
+      isComposing = false;
+      // 조합이 끝난 뒤 높이 다시 계산
+      autoResizeInput();
+    });
+
     autoResizeInput();
 
     // 입력창 포커스 시, 키보드가 올라와도 마지막 메시지가 보이도록 살짝 내려줌
@@ -1640,7 +1827,7 @@
 
     // 엔터로 전송, Shift+Enter 줄바꿈
     inputEl.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" && !e.shiftKey) {
+      if (e.key === "Enter" && !e.shiftKey && !isComposing) {
         e.preventDefault();
         sendMessage();
       }
@@ -1765,6 +1952,10 @@
       } catch (e) {
         console.error(e);
         hideTypingIndicator();
+
+        // 마지막에 보낸 내 메시지를 "전송 실패" 상태로 표시하고 재전송 버튼 제공
+        markMessageAsFailed(userMsg.id);
+
         const errorMsg = createMessage(
           "assistant",
           "연결 중 오류가 났어. (HTTP 오류)"
