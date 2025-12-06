@@ -1196,23 +1196,41 @@
         if (m !== menu) m.classList.remove("show");
       });
 
-      // 기본 위치는 말풍선 위쪽
-      menu.style.top = "-28px";
-      menu.style.bottom = "auto";
+      // 일단 보이게 만든 뒤, 롱프레스 좌표를 기준으로 위치 계산
       menu.classList.add("show");
+      menu.style.bottom = "auto";
 
-      // 메뉴가 화면(메시지 영역) 밖으로 나가면, 말풍선 아래쪽으로 위치 조정
       if (messagesEl) {
         requestAnimationFrame(() => {
+          const wrapRect = wrap.getBoundingClientRect();
           const menuRect = menu.getBoundingClientRect();
           const messagesRect = messagesEl.getBoundingClientRect();
 
-          // 메뉴 상단이 메시지 영역 위로 튀어나가면, 아래쪽으로 붙이기
-          if (menuRect.top < messagesRect.top + 8) {
-            menu.style.top = "auto";
-            menu.style.bottom = "-28px";
+          // 롱프레스 위치가 기록되어 있으면 그 근처에, 아니면 말풍선 중앙 기준
+          const pressY = longPressStartY || (wrapRect.top + wrapRect.height / 2);
+
+          // 기본은 손가락 바로 위쪽에 메뉴를 두는 방향으로 계산
+          let menuTopInViewport = pressY - menuRect.height - 8;
+
+          // 메뉴가 상단 메시지 영역 밖으로 튀어나가면, 손가락 아래쪽으로 재배치
+          if (menuTopInViewport < messagesRect.top + 8) {
+            menuTopInViewport = pressY + 8;
           }
+
+          // 다시 wrap 내부 좌표계로 변환
+          let localTop = menuTopInViewport - wrapRect.top;
+
+          // 너무 아래로 내려가서 메시지 영역 바닥을 벗어나지 않도록 살짝 클램프
+          const maxTop = messagesRect.bottom - menuRect.height - wrapRect.top - 8;
+          if (localTop > maxTop) {
+            localTop = maxTop;
+          }
+
+          menu.style.top = `${localTop}px`;
         });
+      } else {
+        // messagesEl이 없으면 기존 고정 위치 사용
+        menu.style.top = "-28px";
       }
     }
 
