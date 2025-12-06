@@ -44,7 +44,7 @@
     {
       "label": "⑥ 라즈베리로 푸시 + 동기화",
       "type": "shell",
-      "command": "cd \"$HOME/시공간 스튜디오/spacetiming-studio\" && git push && ssh sowon@192.168.0.50 'cd ~/spacetiming-studio && git pull && sudo systemctl restart spacetiming-portal.service'",
+      "command": "cd \"$HOME/시공간 스튜디오/spacetiming-studio\" && git push && ssh sowon@192.168.0.50 'cd ~/spacetiming-studio && git pull && sudo systemctl restart spacetiming-portal.service spacetiming-director.service'",
       "problemMatcher": []
     }
   ]
