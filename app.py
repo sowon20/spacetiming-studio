@@ -17,7 +17,7 @@ DIRECTOR_CORE_URL = os.getenv(
     "DIRECTOR_CORE_URL",
     "http://127.0.0.1:8897",  # 기본값: 라즈베리 로컬에서 director_server_v1
 )
-UPLOAD_ROOT = Path(os.getenv("UPLOAD_ROOT", "uploads")).resolve()
+UPLOAD_ROOT = Path("/mnt/sowon_cloud/chat_uploads").resolve()
 
 
 class ChatMessage(BaseModel):
