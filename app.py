@@ -78,7 +78,7 @@ HISTORY_WRITE_FILE = Path("portal_history") / "sowon.chat.jsonl"
 HISTORY_WRITE_FILE.parent.mkdir(parents=True, exist_ok=True)
 
 BURNED_HISTORY_FILES = [
-    "akashic/burned_room_2024-11-28.jsonl",
+    "akashic/burned_room_2025-11-28.jsonl",
 ]
 
 
