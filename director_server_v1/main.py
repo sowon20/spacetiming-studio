@@ -12,7 +12,7 @@ from pathlib import Path
 import google.generativeai as genai
 from PIL import Image as PILImage
 
-UPLOAD_ROOT = Path(os.getenv("UPLOAD_ROOT", "/mnt/sowon_cloud/chat_uploads")).resolve()
+UPLOAD_ROOT = Path("/mnt/sowon_cloud/chat_uploads").resolve()
 UPLOAD_ROOT.mkdir(parents=True, exist_ok=True)
 
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")  # 실제 모델 이름에 맞게 수정 가능
