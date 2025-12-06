@@ -1780,7 +1780,10 @@
             pullIndicator.classList.remove("ready");
             pullIndicator.textContent = "🔄 새로고침 중…";
           }
-          location.reload();
+          // 잠깐 텍스트가 보이도록 약간 지연 후 새로고침
+          setTimeout(() => {
+            location.reload();
+          }, 350);
         } else if (pullIndicator) {
           pullIndicator.classList.remove("show");
           pullIndicator.classList.remove("ready");
