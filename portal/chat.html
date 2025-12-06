@@ -1189,11 +1189,31 @@
       if (!wrap) return;
       const menu = wrap.querySelector(".bubble-menu");
       if (!menu) return;
+
+      // 기존에 열려 있던 메뉴는 모두 닫기
       const allMenus = document.querySelectorAll(".bubble-menu");
       allMenus.forEach((m) => {
         if (m !== menu) m.classList.remove("show");
       });
+
+      // 기본 위치는 말풍선 위쪽
+      menu.style.top = "-28px";
+      menu.style.bottom = "auto";
       menu.classList.add("show");
+
+      // 메뉴가 화면(메시지 영역) 밖으로 나가면, 말풍선 아래쪽으로 위치 조정
+      if (messagesEl) {
+        requestAnimationFrame(() => {
+          const menuRect = menu.getBoundingClientRect();
+          const messagesRect = messagesEl.getBoundingClientRect();
+
+          // 메뉴 상단이 메시지 영역 위로 튀어나가면, 아래쪽으로 붙이기
+          if (menuRect.top < messagesRect.top + 8) {
+            menu.style.top = "auto";
+            menu.style.bottom = "-28px";
+          }
+        });
+      }
     }
 
     function cancelLongPress() {
