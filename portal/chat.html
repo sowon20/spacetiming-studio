@@ -838,7 +838,7 @@
       <div class="messages-inner" id="messagesInner">
         <!-- 실제 메시지는 JS에서 렌더링 -->
       </div>
-      <div class="pull-indicator" id="pullIndicator">↑ 위로 올리면 이전 대화 보기</div>
+      <div class="pull-indicator" id="pullIndicator">🔄 위로 올리면 이전 대화 보기</div>
     </main>
 
     <!-- 입력 영역 -->
@@ -1764,10 +1764,10 @@
             pullIndicator.classList.add("show");
             if (pullFromBottomDistance > BOTTOM_THRESHOLD_PX) {
               pullIndicator.classList.add("ready");
-              pullIndicator.textContent = "⟳ 놓으면 새로고침";
+              pullIndicator.textContent = "🔄 놓으면 새로고침";
             } else {
               pullIndicator.classList.remove("ready");
-              pullIndicator.textContent = "⟳ 위로 끌어올리면 새로고침";
+              pullIndicator.textContent = "🔄 위로 끌어올리면 새로고침";
             }
           }
         },
@@ -1778,13 +1778,13 @@
         if (pullFromBottomActive && pullFromBottomDistance > BOTTOM_THRESHOLD_PX) {
           if (pullIndicator) {
             pullIndicator.classList.remove("ready");
-            pullIndicator.textContent = "⟳ 새로고침 중…";
+            pullIndicator.textContent = "🔄 새로고침 중…";
           }
           location.reload();
         } else if (pullIndicator) {
           pullIndicator.classList.remove("show");
           pullIndicator.classList.remove("ready");
-          pullIndicator.textContent = "↑ 위로 올리면 이전 대화 보기";
+          pullIndicator.textContent = "🔄 위로 올리면 이전 대화 보기";
         }
         pullFromBottomActive = false;
         pullFromBottomDistance = 0;
