@@ -1536,6 +1536,218 @@ if (messagesInner) {
         return div;
       }
 
+      const isAssistant = msg.role === "assistant";
+      const row = document.createElement("div");
+      row.className = "msg-row " + (isAssistant ? "other" : "me");
+
+      const wrap = document.createElement("div");
+      wrap.className = "bubble-wrap";
+      wrap.dataset.id = msg.id;
+
+      const toggle = document.createElement("button");
+      toggle.className = "bubble-menu-toggle";
+      toggle.type = "button";
+      toggle.textContent = "⋯";
+
+      const bubble = document.createElement("div");
+      bubble.className = "bubble " + (isAssistant ? "other" : "me");
+      bubble.innerHTML = renderContent(msg.content || "");
+
+      // 첨부파일 렌더링
+      if (Array.isArray(msg.attachments) && msg.attachments.length > 0) {
+        bubble.classList.add("has-attachments");
+
+        const attachmentsWrap = document.createElement("div");
+        attachmentsWrap.className = "bubble-attachments";
+
+        msg.attachments.forEach((att) => {
+          if (!att) return;
+          const name = att.name || att.filename || att.url || "첨부파일";
+          const url = att.url || att.server_path || null;
+          const type = att.type || "";
+
+          const isImage =
+            (type && type.startsWith("image/")) ||
+            (name && /\.(png|jpe?g|webp|gif)$/i.test(name)) ||
+            (url && /\.(png|jpe?g|webp|gif)$/i.test(url));
+
+          const pill = document.createElement("button");
+          pill.type = "button";
+          pill.className = "bubble-attachment" + (isImage ? " image" : "");
+
+          if (isImage && url) {
+            const img = document.createElement("img");
+            img.src = url;
+            img.alt = name;
+            img.className = "bubble-attachment-thumb";
+            pill.appendChild(img);
+          } else {
+            const icon = document.createElement("span");
+            icon.className = "bubble-attachment-icon";
+            icon.textContent = isImage ? "🖼" : "📎";
+
+            const title = document.createElement("span");
+            title.className = "bubble-attachment-name";
+            title.textContent = truncateFileName(name);
+
+            pill.appendChild(icon);
+            pill.appendChild(title);
+          }
+
+          if (url) {
+            pill.addEventListener("click", () => {
+              if (isImage) {
+                openImageViewer(url);
+              } else {
+                window.open(url, "_blank");
+              }
+            });
+          }
+
+          attachmentsWrap.appendChild(pill);
+        });
+
+        bubble.appendChild(attachmentsWrap);
+      }
+
+      const meta = document.createElement("div");
+      meta.className = "bubble-meta" + (isAssistant ? "" : " me");
+      meta.textContent = formatTime(msg.timestamp);
+
+      // 말풍선 메뉴 생성
+      const menu = document.createElement("div");
+      menu.className = "bubble-menu";
+
+      function addMenuButton(action, label) {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.dataset.action = action;
+        btn.textContent = label;
+        menu.appendChild(btn);
+      }
+
+      // 항상 복사
+      addMenuButton("copy", "복사");
+
+      // 내 메시지일 때만 수정/삭제
+      if (!isAssistant) {
+        addMenuButton("edit", "수정");
+        addMenuButton("delete", "삭제");
+      }
+
+      // 항상 기록
+      addMenuButton("pin", "기록");
+
+      wrap.appendChild(toggle);
+      wrap.appendChild(bubble);
+      wrap.appendChild(meta);
+      wrap.appendChild(menu);
+      row.appendChild(wrap);
+      return row;
+    }
+      wrap.dataset.id = msg.id;
+
+      const toggle = document.createElement("button");
+      toggle.className = "bubble-menu-toggle";
+      toggle.type = "button";
+      toggle.textContent = "⋯";
+
+      const bubble = document.createElement("div");
+      bubble.className = "bubble " + (isAssistant ? "other" : "me");
+      bubble.innerHTML = renderContent(msg.content || "");
+
+      // 첨부파일 렌더링
+      if (Array.isArray(msg.attachments) && msg.attachments.length > 0) {
+        bubble.classList.add("has-attachments");
+
+        const attachmentsWrap = document.createElement("div");
+        attachmentsWrap.className = "bubble-attachments";
+
+        msg.attachments.forEach((att) => {
+          if (!att) return;
+          const name = att.name || att.filename || att.url || "첨부파일";
+          const url = att.url || att.server_path || null;
+          const type = att.type || "";
+
+          const isImage =
+            (type && type.startsWith("image/")) ||
+            (name && /\.(png|jpe?g|webp|gif)$/i.test(name)) ||
+            (url && /\.(png|jpe?g|webp|gif)$/i.test(url));
+
+          const pill = document.createElement("button");
+          pill.type = "button";
+          pill.className = "bubble-attachment" + (isImage ? " image" : "");
+
+          if (isImage && url) {
+            const img = document.createElement("img");
+            img.src = url;
+            img.alt = name;
+            img.className = "bubble-attachment-thumb";
+            pill.appendChild(img);
+          } else {
+            const icon = document.createElement("span");
+            icon.className = "bubble-attachment-icon";
+            icon.textContent = isImage ? "🖼" : "📎";
+
+            const title = document.createElement("span");
+            title.className = "bubble-attachment-name";
+            title.textContent = truncateFileName(name);
+
+            pill.appendChild(icon);
+            pill.appendChild(title);
+          }
+
+          if (url) {
+            pill.addEventListener("click", () => {
+              if (isImage) {
+                openImageViewer(url);
+              } else {
+                window.open(url, "_blank");
+              }
+            });
+          }
+
+          attachmentsWrap.appendChild(pill);
+        });
+
+        bubble.appendChild(attachmentsWrap);
+      }
+
+      const meta = document.createElement("div");
+      meta.className = "bubble-meta" + (isAssistant ? "" : " me");
+      meta.textContent = formatTime(msg.timestamp);
+
+      // 말풍선 메뉴 생성
+      const menu = document.createElement("div");
+      menu.className = "bubble-menu";
+
+      function addMenuButton(action, label) {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.dataset.action = action;
+        btn.textContent = label;
+        menu.appendChild(btn);
+      }
+
+      // 항상 복사
+      addMenuButton("copy", "복사");
+
+      // 내 메시지일 때만 수정/삭제
+      if (!isAssistant) {
+        addMenuButton("edit", "수정");
+        addMenuButton("delete", "삭제");
+      }
+
+      // 항상 기록
+      addMenuButton("pin", "기록");
+
+      wrap.appendChild(toggle);
+      wrap.appendChild(bubble);
+      wrap.appendChild(meta);
+      wrap.appendChild(menu);
+      row.appendChild(wrap);
+      return row;
+
       const row = document.createElement("div");
       row.className = "msg-row " + (msg.role === "assistant" ? "other" : "me");
 
@@ -1655,7 +1867,6 @@ if (messagesInner) {
       wrap.appendChild(menu);
       row.appendChild(wrap);
       return row;
-    }
 
     function markMessageAsFailed(msgId) {
       if (!msgId) return;
