@@ -63,12 +63,12 @@
     /* Ensure no body.app-bg-forest::before exists */
 
     .app {
-      height: calc(var(--vh) * 100); /* 실제 뷰포트 높이에 맞춰 키보드 등장 시에도 자연스럽게 줄어들도록 */
+      position: fixed;
+      inset: 0;
       padding: 12px 12px calc(12px + env(safe-area-inset-bottom));
       display: flex;
       flex-direction: column;
       gap: 8px;
-      position: relative;
       z-index: 1;
     }
 
