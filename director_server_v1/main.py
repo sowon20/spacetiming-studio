@@ -12,6 +12,8 @@ from pathlib import Path
 import google.generativeai as genai
 from PIL import Image as PILImage
 
+UPLOAD_ROOT = Path(os.getenv("UPLOAD_ROOT", "/mnt/sowon_cloud/chat_uploads")).resolve()
+
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")  # 실제 모델 이름에 맞게 수정 가능
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
@@ -99,8 +101,25 @@ async def chat(req: "ChatRequest"):
         image_parts = []
         for att in req.attachments or []:
             if att.type and att.type.startswith("image/") and att.url:
-                rel = att.url.lstrip("/")  # 예: uploads/local_default/...
-                img_path = Path(rel)
+                # 예: att.url == "/uploads/local_default/IMG_3001.jpeg" 또는 "uploads/local_default/IMG_3001.jpeg"
+                rel = att.url.lstrip("/")
+                img_rel = Path(rel)
+
+                # /uploads/ 접두어가 붙어 있으면 잘라내고 UPLOAD_ROOT 기준으로 다시 붙인다.
+                if str(img_rel).startswith("uploads/"):
+                    try:
+                        img_rel = img_rel.relative_to("uploads")  # "local_default/IMG_3001.jpeg" 형태
+                    except ValueError:
+                        # relative_to 실패하면 문자열 슬라이스로 fallback
+                        img_rel = Path(str(img_rel)[len("uploads/"):])
+                    img_path = UPLOAD_ROOT / img_rel
+                else:
+                    # 이미 절대 경로라면 그대로, 아니면 UPLOAD_ROOT 기준으로 본다.
+                    if img_rel.is_absolute():
+                        img_path = img_rel
+                    else:
+                        img_path = UPLOAD_ROOT / img_rel
+
                 if img_path.is_file():
                     try:
                         img = PILImage.open(img_path)
