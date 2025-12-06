@@ -1106,7 +1106,7 @@
     }
 
     function formatTime(ts) {
-      // "HH:MM" 형식으로만 온 경우는 그대로 사용
+      // 예전 형식: "HH:MM" 문자열로만 저장된 경우는 그대로 사용
       if (typeof ts === "string" && ts.length >= 5 && ts[2] === ":") {
         return ts.slice(0, 5);
       }
@@ -1129,41 +1129,14 @@
         d = new Date();
       }
 
-      const now = new Date();
-
       const yyyy = d.getFullYear();
       const mm = String(d.getMonth() + 1).padStart(2, "0");
       const dd = String(d.getDate()).padStart(2, "0");
       const hh = String(d.getHours()).padStart(2, "0");
       const mi = String(d.getMinutes()).padStart(2, "0");
 
-      const todayY = now.getFullYear();
-      const todayM = now.getMonth();
-      const todayD = now.getDate();
-
-      const isToday =
-        yyyy === todayY &&
-        d.getMonth() === todayM &&
-        d.getDate() === todayD;
-
-      const yesterday = new Date(todayY, todayM, todayD - 1);
-      const isYesterday =
-        yyyy === yesterday.getFullYear() &&
-        d.getMonth() === yesterday.getMonth() &&
-        d.getDate() === yesterday.getDate();
-
-      if (isToday) {
-        // 오늘: 시간만
-        return `${hh}:${mi}`;
-      }
-
-      if (isYesterday) {
-        // 어제: "어제 HH:MM"
-        return `어제 ${hh}:${mi}`;
-      }
-
-      // 그 외: "MM/DD HH:MM"
-      return `${mm}/${dd} ${hh}:${mi}`;
+      // 항상 절대 시간으로 표시: YYYY-MM-DD HH:MM
+      return `${yyyy}-${mm}-${dd} ${hh}:${mi}`;
     }
 
     function createMessage(role, content, timestamp, attachments) {
@@ -1605,7 +1578,7 @@
         if (serverMsgs.length) {
           // 서버/로컬 모두 있을 때는, 같은 (role + content + 시간) 키를 가진 메시지는
           // "정보가 더 많은 쪽"을 우선 사용한다. (첨부 URL 등)
-          const keyOf = (m) => `${m.role}|${m.content}|${formatTime(m.timestamp)}`;
+          const keyOf = (m) => `${m.role}|${m.content}|${String(m.timestamp ?? "")}`;
 
           const localByKey = new Map();
           if (Array.isArray(localMsgs)) {
