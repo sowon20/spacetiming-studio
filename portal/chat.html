@@ -858,15 +858,6 @@
         </div>
       </div>
 
-      <div class="upload-profile-row">
-        <label>
-          저장 위치
-          <select id="uploadProfileSelect">
-            <option value="local_default">기본 (로컬)</option>
-            <option value="gdrive_main">구글 드라이브 (메인)</option>
-          </select>
-        </label>
-      </div>
 
       <div class="composer-row">
         <button class="attach-btn" type="button" id="attachBtn">＋</button>
@@ -899,7 +890,6 @@
     const fileInput = document.getElementById("fileInput");
     const messagesEl = document.getElementById("messages");
     const pullIndicator = document.getElementById("pullIndicator");
-    const uploadProfileSelect = document.getElementById("uploadProfileSelect");
 
     const bodyEl = document.body;
     const bgImageInput = document.getElementById("bgImageInput");
@@ -932,7 +922,7 @@
     const TYPING_ROW_ID = "assistant-typing";
 
     const STORAGE_KEY = "director_chat_messages_v2";
-    const UPLOAD_PROFILE_KEY = "director_upload_profile";
+    // const UPLOAD_PROFILE_KEY = "director_upload_profile";
     let uploadProfile = "local_default";
     let chatHistory = [];
     let pendingAttachments = [];
@@ -964,23 +954,6 @@
       window.addEventListener("orientationchange", updateViewportHeight);
     }
 
-    // 업로드 프로필 초기화 (localStorage에서 불러오기)
-    if (uploadProfileSelect) {
-      const savedProfile = localStorage.getItem(UPLOAD_PROFILE_KEY);
-      if (savedProfile) {
-        uploadProfile = savedProfile;
-      }
-      uploadProfileSelect.value = uploadProfile;
-      uploadProfileSelect.addEventListener("change", (e) => {
-        const value = e.target.value || "local_default";
-        uploadProfile = value;
-        try {
-          localStorage.setItem(UPLOAD_PROFILE_KEY, uploadProfile);
-        } catch (_) {
-          // ignore
-        }
-      });
-    }
 
     // 배경 이미지 변경: 아이폰 사진첩에서 선택해서 현재 세션 배경으로 사용
     if (bgChangeBtn && bgImageInput && bodyEl) {
