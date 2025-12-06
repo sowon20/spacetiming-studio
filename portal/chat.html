@@ -1940,7 +1940,11 @@
     });
 
     // 페이지 로드 시 서버 기준으로 대화 불러오기
-    renderHistory();
+    renderHistory().then(() => {
+      // 첫 진입 시에는 항상 마지막 대화가 보이도록 한 번 더 강제로 스크롤
+      scrollToBottom();
+      setTimeout(scrollToBottom, 150);
+    });
   </script>
 </body>
 </html>
