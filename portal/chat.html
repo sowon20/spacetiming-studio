@@ -1764,10 +1764,10 @@
             pullIndicator.classList.add("show");
             if (pullFromBottomDistance > BOTTOM_THRESHOLD_PX) {
               pullIndicator.classList.add("ready");
-              pullIndicator.textContent = "놓으면 새로고침";
+              pullIndicator.textContent = "⟳ 놓으면 새로고침";
             } else {
               pullIndicator.classList.remove("ready");
-              pullIndicator.textContent = "위로 끌어올리면 새로고침";
+              pullIndicator.textContent = "⟳ 위로 끌어올리면 새로고침";
             }
           }
         },
@@ -1778,7 +1778,7 @@
         if (pullFromBottomActive && pullFromBottomDistance > BOTTOM_THRESHOLD_PX) {
           if (pullIndicator) {
             pullIndicator.classList.remove("ready");
-            pullIndicator.textContent = "새로고침 중…";
+            pullIndicator.textContent = "⟳ 새로고침 중…";
           }
           location.reload();
         } else if (pullIndicator) {
