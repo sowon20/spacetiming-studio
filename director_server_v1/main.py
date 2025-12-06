@@ -12,7 +12,8 @@ from pathlib import Path
 import google.generativeai as genai
 from PIL import Image as PILImage
 
-UPLOAD_ROOT = Path(os.getenv("UPLOAD_ROOT", "/mnt/sowon_cloud/chat_uploads")).resolve()
+UPLOAD_ROOT = Path(os.getenv("UPLOAD_ROOT", "uploads")).resolve()
+UPLOAD_ROOT.mkdir(parents=True, exist_ok=True)
 
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")  # 실제 모델 이름에 맞게 수정 가능
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
@@ -53,6 +54,7 @@ class AttachmentMeta(BaseModel):
     type: Optional[str] = None
     size: Optional[int] = None
     url: Optional[str] = None
+    server_path: Optional[str] = None
 
 
 class ChatRequest(BaseModel):
@@ -100,33 +102,59 @@ async def chat(req: "ChatRequest"):
 
         image_parts = []
         for att in req.attachments or []:
-            if att.type and att.type.startswith("image/") and att.url:
-                # 예: att.url == "/uploads/local_default/IMG_3001.jpeg" 또는 "uploads/local_default/IMG_3001.jpeg"
-                rel = att.url.lstrip("/")
+            # 1) 이 첨부가 이미지인지 판별 (MIME type 또는 확장자 기반)
+            name_lower = (att.name or "").lower()
+            is_ext_image = name_lower.endswith(
+                (".jpg", ".jpeg", ".png", ".gif", ".webp", ".heic", ".heif", ".bmp")
+            )
+            is_type_image = bool(att.type and att.type.startswith("image/"))
+            if not (is_type_image or is_ext_image):
+                continue
+
+            candidate_paths = []
+
+            # (a) url 기반 경로 추출
+            if att.url:
+                rel = att.url.lstrip("/")  # "/uploads/..." 또는 "uploads/..."
                 img_rel = Path(rel)
 
-                # /uploads/ 접두어가 붙어 있으면 잘라내고 UPLOAD_ROOT 기준으로 다시 붙인다.
                 if str(img_rel).startswith("uploads/"):
                     try:
-                        img_rel = img_rel.relative_to("uploads")  # "local_default/IMG_3001.jpeg" 형태
+                        img_rel = img_rel.relative_to("uploads")  # "local_default/IMG_3001.jpeg"
                     except ValueError:
-                        # relative_to 실패하면 문자열 슬라이스로 fallback
                         img_rel = Path(str(img_rel)[len("uploads/"):])
-                    img_path = UPLOAD_ROOT / img_rel
+                    candidate_paths.append(UPLOAD_ROOT / img_rel)
                 else:
-                    # 이미 절대 경로라면 그대로, 아니면 UPLOAD_ROOT 기준으로 본다.
                     if img_rel.is_absolute():
-                        img_path = img_rel
+                        candidate_paths.append(img_rel)
                     else:
-                        img_path = UPLOAD_ROOT / img_rel
+                        candidate_paths.append(UPLOAD_ROOT / img_rel)
 
-                if img_path.is_file():
-                    try:
-                        img = PILImage.open(img_path)
-                        image_parts.append(img)
-                    except Exception:
-                        # 이미지 하나 실패해도 나머지 흐름은 계속
-                        continue
+            # (b) server_path 가 있으면 그쪽도 후보에 추가
+            if att.server_path:
+                sp = Path(att.server_path)
+                if sp.is_absolute():
+                    candidate_paths.append(sp)
+                else:
+                    candidate_paths.append(UPLOAD_ROOT / sp)
+
+            # (c) 이름만 있을 때는 업로드 프로필 기준으로 추론
+            if att.name:
+                profile = req.upload_profile or "local_default"
+                candidate_paths.append(UPLOAD_ROOT / profile / att.name)
+
+            # 후보 경로들 중에서 실제 존재하는 첫 번째 파일을 연다
+            img_obj = None
+            for p in candidate_paths:
+                try:
+                    if p.is_file():
+                        img_obj = PILImage.open(p)
+                        break
+                except Exception:
+                    continue
+
+            if img_obj is not None:
+                image_parts.append(img_obj)
 
         if image_parts:
             contents = image_parts + [final_prompt]
